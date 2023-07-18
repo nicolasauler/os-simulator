@@ -20,8 +20,7 @@ void init_wins(WINDOW **wins, int n);
 void win_show(WINDOW *win, char *label, int label_color);
 void print_in_middle(WINDOW *win, int starty, int startx, int width,
                      char *string, chtype color);
-void process_commands(WINDOW *console, char *buf);
-int main_loop(WINDOW **wins, char *buf);
+void show_commands(WINDOW *win);
 
 int main(void) {
     WINDOW *my_wins[4];
@@ -65,14 +64,12 @@ int main(void) {
     set_panel_userptr(my_panels[2], &panel_datas[2]);
     set_panel_userptr(my_panels[3], &panel_datas[3]);
 
-    /* update the stacking order. 2nd panel will be on top */
     update_panels();
 
     /* show it on the screen */
-    attron(COLOR_PAIR(2));
+    attron(COLOR_PAIR(4));
     mvprintw(LINES - 2, 0, "Show or Hide a window with 'Tab'(Console)");
     mvprintw(LINES - 1, 0, "F1 to Exit");
-
     attroff(COLOR_PAIR(4));
     doupdate();
 
@@ -81,12 +78,15 @@ int main(void) {
         if (ch == KEY_F(1)) {
             main_loop_exit = 1;
             break;
-        } else if ((temp = ((PANEL_DATA *)panel_userptr(my_panels[3])))->hide == TRUE &&
+        } else if ((temp = ((PANEL_DATA *)panel_userptr(my_panels[3])))->hide ==
+                       TRUE &&
                    ch == 9) {
             show_panel(my_panels[3]);
             temp->hide = FALSE;
-        } else if ((temp = ((PANEL_DATA *)panel_userptr(my_panels[3])))->hide == FALSE) {
-            if (i == 0) {
+        } else if ((temp = ((PANEL_DATA *)panel_userptr(my_panels[3])))->hide ==
+                   FALSE) {
+            if (i == 0 && ch != 9 && ch != 8 && ch != KEY_BACKSPACE &&
+                ch != 127) {
                 getyx(my_wins[3], y, x);
                 x = 2;
                 y += 2;
@@ -99,7 +99,7 @@ int main(void) {
             }
             if (ch == 8 || ch == KEY_BACKSPACE || ch == 127) {
                 getyx(my_wins[3], y, x);
-                if (x > 2) {
+                if (x > 4) {
                     wmove(my_wins[3], y, x - 1);
                     /* waddch(console, ' ');
                     wmove(console, y, x); */
@@ -116,6 +116,16 @@ int main(void) {
                 wmove(my_wins[3], ++y, x = 4);
                 command[i] = '\0';
                 /* process command after enter */
+                if (i > 0) {
+                    if (strcmp(command, "create") == 0) {
+                        /* wprintw(my_wins[1], "create"); */
+                    } else if (strcmp(command, "delete") == 0) {
+                    } else if (strcmp(command, "exit") == 0) {
+                        main_loop_exit = 1;
+                    } else {
+                        show_commands(my_wins[3]);
+                    }
+                }
                 i = 0;
             } else {
                 getyx(my_wins[3], y, x);
@@ -128,27 +138,7 @@ int main(void) {
         doupdate();
     }
 
-    /*    while ((ch = getch()) != KEY_F(1)) {
-            main_loop_exit = main_loop(my_wins, command);
-            if (main_loop_exit == 1) {
-                break;
-            }
-            if ((ch == 9) || (main_loop_exit == 2)) {
-                if (temp->hide == FALSE) {
-                    hide_panel(my_panels[3]);
-                    temp->hide = TRUE;
-                } else {
-                    show_panel(my_panels[3]);
-                    temp->hide = FALSE;
-                }
-            }
-            update_panels();
-            doupdate();
-        }
-    */
-
     endwin();
-
     return (0);
 }
 
@@ -175,9 +165,9 @@ void init_wins(WINDOW **wins, int n) {
 
 /* show the window with a border and a label */
 void win_show(WINDOW *win, char *label, int label_color) {
-    int startx, starty, height, width;
+    int width;
+    __attribute__((unused)) int height;
 
-    getbegyx(win, starty, startx);
     getmaxyx(win, height, width);
 
     box(win, 0, 0);
@@ -209,7 +199,7 @@ void print_in_middle(WINDOW *win, int starty, int startx, int width,
     }
 
     length = strlen(string);
-    temp = (width - length) / 2;
+    temp = (float)(width - length) / 2;
     x = startx + (int)temp;
     wattron(win, color);
     mvwprintw(win, y, x, "%s", string);
@@ -217,76 +207,17 @@ void print_in_middle(WINDOW *win, int starty, int startx, int width,
     refresh();
 }
 
-/* move cursor to inside of the window, which represents a console line
- * then, make the panel behave like a prompt,
- * saving the user commmand to a buffer and returning it
- */
-void process_commands(WINDOW *console, char *buf) {
-    int ch;
-    int x, y, i;
-
-    getyx(console, y, x);
-    x = 2;
-    y += 2;
-    /* print '$' character to indicate the prompt */
-    wattron(console, COLOR_PAIR(4));
-    mvwprintw(console, y, x, "$");
-    wattroff(console, COLOR_PAIR(4));
-    wmove(console, y, x + 2);
-    wrefresh(console);
-    i = 0;
-    while ((ch = wgetch(console)) != KEY_F(1) && ch != 9 && ch != 10) {
-        switch (ch) {
-        case KEY_BACKSPACE:
-        case 127:
-        case 8:
-            getyx(console, y, x);
-            if (x > 1) {
-                wmove(console, y, --x);
-                waddch(console, ' ');
-                wmove(console, y, x);
-                buf[i--] = '\0';
-            }
-            break;
-        default:
-            getyx(console, y, x);
-            waddch(console, ch);
-            wmove(console, y, ++x);
-            buf[i++] = ch;
-            break;
-        }
-        wrefresh(console);
-    }
-    getyx(console, y, x);
-    wmove(console, ++y, x = 4);
-    buf[i] = '\0';
-}
-
 void show_commands(WINDOW *console) {
     int x, y;
     getyx(console, y, x);
-    wmove(console, y, x = 2);
-    waddstr(console, "create - create a new process\n");
-    waddstr(console, "exit - exit the program\n");
+    wmove(console, y, x = 4);
+    mvwaddstr(console, y, x, "create - create a new process\n");
+    mvwaddstr(console, y + 1, x, "         create [priority] [time]\n");
+    mvwaddstr(console, y + 2, x, "         priority: 0 - 3\n");
+    mvwaddstr(console, y + 3, x, "         time: 1 - 10\n");
+    mvwaddstr(console, y + 4, x, "delete - delete a process\n");
+    mvwaddstr(console, y + 5, x, "         delete [pid]\n");
+    mvwaddstr(console, y + 6, x, "         pid: 1 - 10\n");
+    mvwaddstr(console, y + 7, x, "exit - exit the program\n");
     wrefresh(console);
-}
-
-/* while commands inputted by user are not 'create' or 'exit'
- * keep processing commands, and show the list of commands
- */
-int main_loop(WINDOW **wins, char *buf) {
-    while (strcmp(buf, "create") != 0 && strcmp(buf, "exit") != 0) {
-        process_commands(wins[3], buf);
-        if (strchr(buf, '\t') == NULL) {
-            return 2;
-        }
-        if (strcmp(buf, "create") != 0 && strcmp(buf, "exit") != 0) {
-            show_commands(wins[3]);
-        }
-    }
-    if (strcmp(buf, "create") == 0) {
-        return 0;
-    } else {
-        return 1;
-    }
 }

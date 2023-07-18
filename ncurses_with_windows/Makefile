@@ -1,7 +1,7 @@
 CC=gcc
 CFLAGS=-Wall -Wextra -Wshadow -ansi -pedantic -g
-LDFLAGS=-lncurses -lpanel
-SOURCES=panels.c
+LDFLAGS=-lncurses
+SOURCES=interface.c teste_ncurses.c
 OBJECTS=$(SOURCES:.c=.o)
 EXECUTABLE=main
 
