@@ -1,0 +1,5 @@
+# gitignore file
+# ignore *.o files and main executable
+
+*.o
+main
