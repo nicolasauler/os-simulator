@@ -164,3 +164,15 @@ void add_char_to_console(WINDOW *win, int ch) {
     waddch(win, ch);
     wmove(win, y, x + 1);
 }
+
+/* print process p to whe window 1 */
+void update_interface(WINDOW **wins, PANEL **panels, process p[10]) {
+    int i;
+    wmove(wins[1], 5, 5);
+    for (i = 0; p[i].is_active == 1; i++) {
+        waddstr(wins[1], "PID: ");
+        wprintw(wins[1], "%d", p[i].pid);
+        waddstr(wins[1], "Memory size: ");
+        wprintw(wins[1], "%d", p[i].mem_size);
+    }
+}

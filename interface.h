@@ -1,3 +1,7 @@
+#ifndef _INTERFACE_H_
+#define _INTERFACE_H_
+
+#include "scheduler.h"
 #include <curses.h>
 #include <ncurses.h>
 #include <panel.h>
@@ -11,6 +15,8 @@ typedef struct _PANEL_DATA {
     int hide; /* TRUE if panel is hidden */
 } PANEL_DATA;
 
+extern struct process processo;
+
 void init_wins(WINDOW **wins, int n);
 void win_show(WINDOW *win, char *label, int label_color);
 void print_in_middle(WINDOW *win, int starty, int startx, int width,
@@ -23,3 +29,8 @@ void print_prompt_char(WINDOW *console_win);
 void do_backspace_action_on_console(WINDOW *win);
 void do_enter_action_on_console(WINDOW *win);
 void add_char_to_console(WINDOW *win, int ch);
+
+void update_interface(WINDOW **wins, PANEL **panels,
+                      struct process processo[10]);
+
+#endif
