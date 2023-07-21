@@ -30,7 +30,14 @@ void do_backspace_action_on_console(WINDOW *win);
 void do_enter_action_on_console(WINDOW *win);
 void add_char_to_console(WINDOW *win, int ch);
 
-void update_interface(WINDOW **wins, PANEL **panels,
-                      struct process processo[10]);
+void update_interface(WINDOW **wins, struct process processo[MAXPRCS]);
+
+void print_in_queue(WINDOW *win, int starty, int startx, int width,
+                    char *string);
+
+void restart_queue(WINDOW *win);
+void restart_map(WINDOW *win);
+
+void print_bit_map_of_processes_memory(WINDOW *win, process p[MAXPRCS]);
 
 #endif

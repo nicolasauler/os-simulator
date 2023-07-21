@@ -97,6 +97,7 @@ void init_interface(WINDOW **my_wins, PANEL **my_panels,
     init_pair(2, COLOR_GREEN, COLOR_BLACK);
     init_pair(3, COLOR_BLUE, COLOR_BLACK);
     init_pair(4, COLOR_CYAN, COLOR_BLACK);
+    init_pair(5, COLOR_BLACK, COLOR_WHITE);
 
     /* initialize windows */
     init_wins(my_wins, 4);
@@ -166,13 +167,103 @@ void add_char_to_console(WINDOW *win, int ch) {
 }
 
 /* print process p to whe window 1 */
-void update_interface(WINDOW **wins, PANEL **panels, process p[10]) {
+void update_interface(WINDOW **wins, process p[MAXPRCS]) {
     int i;
-    wmove(wins[1], 5, 5);
-    for (i = 0; p[i].is_active == 1; i++) {
-        waddstr(wins[1], "PID: ");
-        wprintw(wins[1], "%d", p[i].pid);
-        waddstr(wins[1], "Memory size: ");
-        wprintw(wins[1], "%d", p[i].mem_size);
+    int n_actives = 0;
+    int helper = 0;
+    char pid_text[MAXSTR];
+
+    restart_queue(wins[0]);
+    wmove(wins[0], 1, 1);
+
+    for (i = 0; i < MAXPRCS; i++) {
+        if (p[i].is_active == 1) {
+            n_actives += 1;
+        }
     }
+    for (i = 0; i < MAXPRCS; i++) {
+        if (p[i].is_active == 1) {
+            sprintf(pid_text, "PID: %d\n", p[i].pid);
+            /* invert the colors before printing */
+            if (helper == 0) {
+                wattron(wins[0], COLOR_PAIR(5));
+            }
+            mvwprintw(wins[0], 3, helper * 10 + 1, "%s", pid_text);
+            if (helper == 0) {
+                wattroff(wins[0], COLOR_PAIR(5));
+            }
+            refresh();
+
+            if (helper < n_actives) {
+                helper += 1;
+            }
+        }
+    }
+
+    /* print a matrix of 6 by 6 zeros in win[2] */
+    print_bit_map_of_processes_memory(wins[2], p);
+
+    doupdate();
+}
+
+void print_in_queue(WINDOW *win, int starty, int startx, int width,
+                    char *string) {
+    int length, x, y;
+    float temp;
+
+    if (win == NULL) {
+        win = stdscr;
+    }
+    getyx(win, y, x);
+    if (startx != 0) {
+        x = startx;
+    }
+    if (starty != 0) {
+        y = starty;
+    }
+    if (width == 0) {
+        width = 80;
+    }
+
+    length = strlen(string);
+    temp = (float)(width - length) / 2;
+    x = startx + (int)temp;
+    mvwprintw(win, y, x, "%s", string);
+    refresh();
+}
+
+void restart_queue(WINDOW *win) {
+    char label[MAXSTR];
+    werase(win);
+    sprintf(label, "Queue");
+    win_show(win, label, 1);
+    wrefresh(win);
+    doupdate();
+}
+
+void restart_map(WINDOW *win) {
+    char label[MAXSTR];
+    werase(win);
+    sprintf(label, "Bit Map");
+    win_show(win, label, 3);
+    wrefresh(win);
+    doupdate();
+}
+
+void print_bit_map_of_processes_memory(WINDOW *win, process *p) {
+    int i, j;
+    int x, y;
+    float scalex, scaley;
+    restart_map(win);
+    getmaxyx(win, y, x);
+    scalex = (float)(x - 6) / 6;
+    scaley = (float)(y - 6) / 6;
+    wmove(win, 1, 1);
+    for (i = 0; i < 6; i++) {
+        for (j = 0; j < 6; j++) {
+            /* print zeros to populate a map throughout the window */
+            mvwprintw(win, 2 + ((i + 1) * scaley), ((j + 0.75) * scalex), "%d", 0);
+        }
+    }
+    refresh();
 }

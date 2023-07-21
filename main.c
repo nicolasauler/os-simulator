@@ -7,13 +7,33 @@
 #include "interface.h"
 #include "scheduler.h"
 #include <getopt.h>
+#include <pthread.h>
 #include <stdint.h>
 #include <stdlib.h>
 
-process process_list[10];
+process process_list[MAXPRCS];
 
-int process_command(WINDOW **wins, PANEL **panels, char *command, process p[10],
-                    uint8_t *process_count);
+typedef struct {
+    WINDOW **wins;
+    char **commands;
+    int n_strings;
+    process *p;
+    uint8_t *process_count;
+    int main_loop_exit;
+} thread_args;
+
+/* process user commands
+ * commands are either create -m <int>, which creates a simulated
+ * process, where the -m flag specifies size of memory used and is an
+ * optional flag or kill <int>, which kills a simulated process use
+ * getopt. also, if user enters create -m, only accept if also has inputted
+ * the <int> argument to the -m option
+ * */
+int process_command(WINDOW **wins, char **commands, int n_strings,
+                    process p[MAXPRCS], uint8_t *process_count);
+
+void *process_async_command(void *args);
+char **tokenize_command(char *command, int *n_strings);
 
 int main(void) {
     WINDOW *my_wins[4];
@@ -58,9 +78,24 @@ int main(void) {
                 do_enter_action_on_console(my_wins[3]);
                 command[i] = '\0';
                 if (i > 0) {
-                    main_loop_exit =
-                        process_command(my_wins, my_panels, command,
-                                        process_list, &process_count);
+                    /* process_command in another pthread
+                     * use pthreads */
+                    /* main_loop_exit = process_command(
+                        my_wins, command, process_list, &process_count); */
+                    int n_strings = 0;
+                    char **commands = tokenize_command(command, &n_strings);
+
+                    thread_args *args = malloc(sizeof(thread_args));
+                    args->wins = my_wins;
+                    args->commands = commands;
+                    args->n_strings = n_strings;
+                    args->p = process_list;
+                    args->process_count = &process_count;
+                    pthread_t thread;
+                    pthread_create(&thread, NULL, process_async_command, args);
+                    pthread_join(thread, NULL);
+                    main_loop_exit = args->main_loop_exit;
+                    free(args);
                 }
                 i = 0;
             } else {
@@ -76,30 +111,36 @@ int main(void) {
     return (0);
 }
 
-int process_command(WINDOW **wins, PANEL **panels, char *command, process p[10],
-                    uint8_t *process_count) {
-    int j = 0;
+void *process_async_command(void *args) {
+    int main_loop_exit;
+    thread_args *t_args = (thread_args *)args;
+    main_loop_exit =
+        process_command(t_args->wins, t_args->commands, t_args->n_strings,
+                        t_args->p, t_args->process_count);
+    t_args->main_loop_exit = main_loop_exit;
+    pthread_exit(NULL);
+}
+
+char **tokenize_command(char *command, int *n_strings) {
     char *token = strtok(command, " ");
     char **commands = malloc(sizeof(char *) * MAXSTR);
 
     while (token != NULL) {
-        commands[j++] = token;
+        commands[(*n_strings)++] = token;
         token = strtok(NULL, " ");
     }
-    commands[j] = NULL;
+    commands[(*n_strings)] = NULL;
 
-    /* process user commands
-     * commands are either create -m <int>, which creates a simulated
-     * process, where the -m flag specifies size of memory used and is an
-     * optional flag or kill <int>, which kills a simulated process use
-     * getopt. also, if user enters create -m, only accept if also has inputted
-     * the <int> argument to the -m option
-     * */
+    return commands;
+}
+
+int process_command(WINDOW **wins, char **commands, int n_strings,
+                    process p[MAXPRCS], uint8_t *process_count) {
     if (strcmp(commands[0], "create") == 0) {
         int opt;
         int mem_size = 0;
         optind = 0;
-        while ((opt = getopt(j, commands, "m")) != -1) {
+        while ((opt = getopt(n_strings, commands, "m:")) != -1) {
             switch (opt) {
             case 'm':
                 mem_size = atoi(optarg);
@@ -108,16 +149,17 @@ int process_command(WINDOW **wins, PANEL **panels, char *command, process p[10],
                 break;
             }
         }
-        /*
         if (mem_size == 0) {
             mem_size = 1;
-        } */
+        }
         create_process((*process_count), mem_size, p);
         (*process_count) += 1;
-        update_interface(wins, panels, p);
+        update_interface(wins, p);
         wprintw(wins[3], "create process with %d memory\n", mem_size);
     } else if (strcmp(commands[0], "kill") == 0) {
         int pid = atoi(commands[1]);
+        kill_process(pid, p);
+        update_interface(wins, p);
         wprintw(wins[3], "kill process %d\n", pid);
     } else if (strcmp(commands[0], "help") == 0) {
         show_commands(wins[3]);

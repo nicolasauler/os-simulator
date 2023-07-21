@@ -1,6 +1,6 @@
 CC=gcc
 CFLAGS=-Wall -Wextra -Wshadow -ansi -pedantic -g
-LDFLAGS=-lncurses -lpanel
+LDFLAGS=-lncurses -lpanel -lpthread
 SOURCES=main.c interface.c scheduler.c
 OBJECTS=$(SOURCES:.c=.o)
 EXECUTABLE=main
