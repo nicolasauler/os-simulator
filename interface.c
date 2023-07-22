@@ -177,12 +177,12 @@ void update_interface(WINDOW **wins, process p[MAXPRCS]) {
     wmove(wins[0], 1, 1);
 
     for (i = 0; i < MAXPRCS; i++) {
-        if (p[i].is_active == 1) {
+        if (p[i].state == READY || p[i].state == RUNNING) {
             n_actives += 1;
         }
     }
     for (i = 0; i < MAXPRCS; i++) {
-        if (p[i].is_active == 1) {
+        if (p[i].state == READY || p[i].state == RUNNING) {
             sprintf(pid_text, "PID: %d\n", p[i].pid);
             /* invert the colors before printing */
             if (helper == 0) {
@@ -250,7 +250,7 @@ void restart_map(WINDOW *win) {
     doupdate();
 }
 
-void print_bit_map_of_processes_memory(WINDOW *win, process *p) {
+void print_bit_map_of_processes_memory(WINDOW *win, process p[MAXPRCS]) {
     int i, j;
     int x, y;
     float scalex, scaley;

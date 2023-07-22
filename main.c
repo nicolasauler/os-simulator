@@ -10,30 +10,31 @@
 #include <pthread.h>
 #include <stdint.h>
 #include <stdlib.h>
+#include <threads.h>
+#include <unistd.h>
 
 process process_list[MAXPRCS];
 
+/*
 typedef struct {
     WINDOW **wins;
     char **commands;
     int n_strings;
     process *p;
     uint8_t *process_count;
-    int main_loop_exit;
-} thread_args;
+} thread_args; */
 
-/* process user commands
+/*
  * commands are either create -m <int>, which creates a simulated
  * process, where the -m flag specifies size of memory used and is an
- * optional flag or kill <int>, which kills a simulated process use
- * getopt. also, if user enters create -m, only accept if also has inputted
- * the <int> argument to the -m option
+ * optional flag or kill <int>, which kills a simulated process use getopt
  * */
-int process_command(WINDOW **wins, char **commands, int n_strings,
-                    process p[MAXPRCS], uint8_t *process_count);
+void process_command(WINDOW **wins, char **commands, int n_strings,
+                     process p[MAXPRCS], uint8_t *process_count);
 
-void *process_async_command(void *args);
+/* void *process_async_command(void *args); */
 char **tokenize_command(char *command, int *n_strings);
+void *kernel(void *args);
 
 int main(void) {
     WINDOW *my_wins[4];
@@ -42,22 +43,22 @@ int main(void) {
     PANEL_DATA *temp;
     int ch;
     char command[MAXSTR];
+    pthread_t kernel_thread;
     int i = 0;
-    int main_loop_exit = 0;
     uint8_t process_count = 0;
 
     init_interface(my_wins, my_panels, panel_datas);
 
     show_keyboard_shortcuts();
 
-    while (main_loop_exit != 1) {
-        ch = getch();
-        if (ch == KEY_F(1)) {
-            main_loop_exit = 1;
-            break;
-        } else if ((temp = ((PANEL_DATA *)panel_userptr(my_panels[3])))->hide ==
-                       TRUE &&
-                   ch == 9) {
+    /* launch the kernel as a separate pthread to continuously update the process
+     * so it is updated non blocking in the interface */
+    pthread_create(&kernel_thread, NULL, kernel, (void *)process_list);
+
+    while (ch = getch(), ch != KEY_F(1)) {
+        if ((temp = ((PANEL_DATA *)panel_userptr(my_panels[3])))->hide ==
+                TRUE &&
+            ch == 9) {
             show_panel(my_panels[3]);
             temp->hide = FALSE;
         } else if ((temp = ((PANEL_DATA *)panel_userptr(my_panels[3])))->hide ==
@@ -78,14 +79,12 @@ int main(void) {
                 do_enter_action_on_console(my_wins[3]);
                 command[i] = '\0';
                 if (i > 0) {
-                    /* process_command in another pthread
-                     * use pthreads */
-                    /* main_loop_exit = process_command(
-                        my_wins, command, process_list, &process_count); */
                     int n_strings = 0;
                     char **commands = tokenize_command(command, &n_strings);
+                    process_command(my_wins, commands, n_strings, process_list,
+                                    &process_count);
 
-                    thread_args *args = malloc(sizeof(thread_args));
+                    /* thread_args *args = malloc(sizeof(thread_args));
                     args->wins = my_wins;
                     args->commands = commands;
                     args->n_strings = n_strings;
@@ -94,8 +93,7 @@ int main(void) {
                     pthread_t thread;
                     pthread_create(&thread, NULL, process_async_command, args);
                     pthread_join(thread, NULL);
-                    main_loop_exit = args->main_loop_exit;
-                    free(args);
+                    free(args); */
                 }
                 i = 0;
             } else {
@@ -108,18 +106,33 @@ int main(void) {
     }
 
     endwin();
+    pthread_cancel(kernel_thread);
     return (0);
 }
 
-void *process_async_command(void *args) {
-    int main_loop_exit;
-    thread_args *t_args = (thread_args *)args;
-    main_loop_exit =
-        process_command(t_args->wins, t_args->commands, t_args->n_strings,
-                        t_args->p, t_args->process_count);
-    t_args->main_loop_exit = main_loop_exit;
+void *kernel(void *args) {
+    int i;
+    int help;
+    process *p = (process *)args;
+    for (i = 0; i < MAXPRCS; i++) {
+        if (p[i].state == RUNNING) {
+            for (help = 0; help < p[i].mem_size; help++) {
+                sleep(1);
+            }
+            p[i].state = TERMINATED;
+            break;
+        }
+    }
     pthread_exit(NULL);
 }
+
+/*
+void *process_async_command(void *args) {
+    thread_args *t_args = (thread_args *)args;
+    process_command(t_args->wins, t_args->commands, t_args->n_strings,
+                    t_args->p, t_args->process_count);
+    pthread_exit(NULL);
+} */
 
 char **tokenize_command(char *command, int *n_strings) {
     char *token = strtok(command, " ");
@@ -134,8 +147,8 @@ char **tokenize_command(char *command, int *n_strings) {
     return commands;
 }
 
-int process_command(WINDOW **wins, char **commands, int n_strings,
-                    process p[MAXPRCS], uint8_t *process_count) {
+void process_command(WINDOW **wins, char **commands, int n_strings,
+                     process p[MAXPRCS], uint8_t *process_count) {
     if (strcmp(commands[0], "create") == 0) {
         int opt;
         int mem_size = 0;
@@ -157,19 +170,17 @@ int process_command(WINDOW **wins, char **commands, int n_strings,
         update_interface(wins, p);
         wprintw(wins[3], "create process with %d memory\n", mem_size);
     } else if (strcmp(commands[0], "kill") == 0) {
-        int pid = atoi(commands[1]);
-        kill_process(pid, p);
-        update_interface(wins, p);
-        wprintw(wins[3], "kill process %d\n", pid);
-    } else if (strcmp(commands[0], "help") == 0) {
-        show_commands(wins[3]);
-    } else if (strcmp(commands[0], "exit") == 0) {
-        free(commands);
-        return (1);
+        if (n_strings != 2) {
+            show_commands(wins[3]);
+        } else {
+            int pid = atoi(commands[1]);
+            kill_process(pid, p);
+            update_interface(wins, p);
+            wprintw(wins[3], "kill process %d\n", pid);
+        }
     } else {
         show_commands(wins[3]);
     }
 
     free(commands);
-    return (0);
 }
