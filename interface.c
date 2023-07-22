@@ -74,11 +74,10 @@ void show_commands(WINDOW *console) {
     mvwaddstr(console, y, x, "create - create a new process\n");
     mvwaddstr(console, y + 1, x, "         create [priority] [time]\n");
     mvwaddstr(console, y + 2, x, "         priority: 0 - 3\n");
-    mvwaddstr(console, y + 3, x, "         time: 1 - 10\n");
-    mvwaddstr(console, y + 4, x, "delete - delete a process\n");
+    mvwaddstr(console, y + 3, x, "         mem: 1 - 20\n");
+    mvwaddstr(console, y + 4, x, "kill - kill a process\n");
     mvwaddstr(console, y + 5, x, "         delete [pid]\n");
-    mvwaddstr(console, y + 6, x, "         pid: 1 - 10\n");
-    mvwaddstr(console, y + 7, x, "exit - exit the program\n");
+    mvwaddstr(console, y + 6, x, "         pid: 1 - 64\n");
     wrefresh(console);
 }
 

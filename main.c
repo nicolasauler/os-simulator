@@ -15,14 +15,10 @@
 
 process process_list[MAXPRCS];
 
-/*
 typedef struct {
     WINDOW **wins;
-    char **commands;
-    int n_strings;
     process *p;
-    uint8_t *process_count;
-} thread_args; */
+} thread_args;
 
 /*
  * commands are either create -m <int>, which creates a simulated
@@ -44,6 +40,7 @@ int main(void) {
     int ch;
     char command[MAXSTR];
     pthread_t kernel_thread;
+    thread_args *args = malloc(sizeof(thread_args));
     int i = 0;
     uint8_t process_count = 0;
 
@@ -51,9 +48,11 @@ int main(void) {
 
     show_keyboard_shortcuts();
 
-    /* launch the kernel as a separate pthread to continuously update the process
-     * so it is updated non blocking in the interface */
-    pthread_create(&kernel_thread, NULL, kernel, (void *)process_list);
+    /* launch the kernel as a separate pthread to continuously update the
+     * process so it is updated non blocking in the interface */
+    args->wins = my_wins;
+    args->p = process_list;
+    pthread_create(&kernel_thread, NULL, kernel, args);
 
     while (ch = getch(), ch != KEY_F(1)) {
         if ((temp = ((PANEL_DATA *)panel_userptr(my_panels[3])))->hide ==
@@ -84,6 +83,8 @@ int main(void) {
                     process_command(my_wins, commands, n_strings, process_list,
                                     &process_count);
 
+                    update_interface(my_wins, process_list);
+
                     /* thread_args *args = malloc(sizeof(thread_args));
                     args->wins = my_wins;
                     args->commands = commands;
@@ -113,14 +114,20 @@ int main(void) {
 void *kernel(void *args) {
     int i;
     int help;
-    process *p = (process *)args;
-    for (i = 0; i < MAXPRCS; i++) {
-        if (p[i].state == RUNNING) {
-            for (help = 0; help < p[i].mem_size; help++) {
-                sleep(1);
+    WINDOW **my_wins = ((thread_args *)args)->wins;
+    process *p = ((thread_args *)args)->p;
+    while (1) {
+        for (i = 0; i < MAXPRCS; i++) {
+            if (p[i].state == READY) {
+                p[i].state = RUNNING;
+                for (help = 0; help < p[i].mem_size; help++) {
+                    sleep(2);
+                    p[i].time_used += 1;
+                }
+                p[i].state = TERMINATED;
+                update_interface(my_wins, process_list);
+                break;
             }
-            p[i].state = TERMINATED;
-            break;
         }
     }
     pthread_exit(NULL);
@@ -167,7 +174,6 @@ void process_command(WINDOW **wins, char **commands, int n_strings,
         }
         create_process((*process_count), mem_size, p);
         (*process_count) += 1;
-        update_interface(wins, p);
         wprintw(wins[3], "create process with %d memory\n", mem_size);
     } else if (strcmp(commands[0], "kill") == 0) {
         if (n_strings != 2) {
@@ -175,7 +181,6 @@ void process_command(WINDOW **wins, char **commands, int n_strings,
         } else {
             int pid = atoi(commands[1]);
             kill_process(pid, p);
-            update_interface(wins, p);
             wprintw(wins[3], "kill process %d\n", pid);
         }
     } else {
