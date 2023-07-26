@@ -6,7 +6,7 @@ process_t *create_process(int mem_size, uint8_t pid) {
     new_process->pid = pid;
     new_process->mem_size = mem_size;
     new_process->mem_start = 0;
-    new_process->state = NEW;
+    new_process->state = READY;
     new_process->time_quantum = 0;
     new_process->time_remaining = 10;
     new_process->time_used = 0;
@@ -59,17 +59,24 @@ p_circ_queue_t *run_process(p_circ_queue_t *queue) {
     }
 }
 
-void kill_process(uint8_t pid, p_circ_queue_t *queue) {
+p_circ_queue_t *kill_process(uint8_t pid, p_circ_queue_t *queue) {
     p_circ_queue_t *current = queue;
 
     if (queue == NULL) {
-        return;
+        return NULL;
     }
 
     while (current->process->pid != pid) {
         current = current->next;
     }
+
+    if (current->next == current) {
+        free(current);
+        return NULL;
+    }
+
     current->prev->next = current->next;
     current->next->prev = current->prev;
     free(current);
+    return queue;
 }

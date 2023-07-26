@@ -13,16 +13,13 @@
 #include <threads.h>
 #include <unistd.h>
 
-p_circ_queue_t *p_queue;
-
 typedef struct {
     WINDOW **wins;
     p_circ_queue_t *p;
 } thread_args;
 
 void process_command(WINDOW **wins, char **commands, int n_strings,
-                     p_circ_queue_t *p, uint8_t *process_count);
-
+                     p_circ_queue_t **p, uint8_t *process_count);
 char **tokenize_command(char *command, int *n_strings);
 void *kernel(void *args);
 
@@ -37,6 +34,8 @@ int main(void) {
     thread_args *args = malloc(sizeof(thread_args));
     int i = 0;
     uint8_t process_count = 0;
+
+    p_circ_queue_t *p_queue = NULL;
 
     init_interface(my_wins, my_panels, panel_datas);
     show_keyboard_shortcuts();
@@ -71,7 +70,7 @@ int main(void) {
                 if (i > 0) {
                     int n_strings = 0;
                     char **commands = tokenize_command(command, &n_strings);
-                    process_command(my_wins, commands, n_strings, p_queue,
+                    process_command(my_wins, commands, n_strings, &p_queue,
                                     &process_count);
 
                     update_interface(my_wins, p_queue);
@@ -108,19 +107,19 @@ void *kernel(void *args) {
             continue;
         }
 
-        while (current->next != p) {
+        do {
             if (p->process->state == READY) {
                 p->process->state = RUNNING;
                 for (help = 0; help < p->process->mem_size; help++) {
                     run_process(p);
-                    sleep(5);
-                    update_interface(my_wins, p_queue);
+                    sleep(8);
+                    update_interface(my_wins, p);
                 }
                 p->process->state = TERMINATED;
                 break;
             }
             current = current->next;
-        }
+        } while (current != p);
     }
     pthread_exit(NULL);
 }
@@ -139,7 +138,7 @@ char **tokenize_command(char *command, int *n_strings) {
 }
 
 void process_command(WINDOW **wins, char **commands, int n_strings,
-                     p_circ_queue_t *p, uint8_t *process_count) {
+                     p_circ_queue_t **p, uint8_t *process_count) {
     if (strcmp(commands[0], "create") == 0) {
         int opt;
         process_t *p1;
@@ -160,15 +159,15 @@ void process_command(WINDOW **wins, char **commands, int n_strings,
         }
 
         p1 = create_process(mem_size, (*process_count));
-        p = add_process_to_queue(p, p1);
         (*process_count) += 1;
+        (*p) = add_process_to_queue((*p), p1);
         wprintw(wins[3], "create process with %d memory\n", mem_size);
     } else if (strcmp(commands[0], "kill") == 0) {
         if (n_strings != 2) {
             show_commands(wins[3]);
         } else {
             int pid = atoi(commands[1]);
-            kill_process(pid, p);
+            (*p) = kill_process(pid, (*p));
             wprintw(wins[3], "kill process %d\n", pid);
         }
     } else {

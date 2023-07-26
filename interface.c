@@ -167,7 +167,7 @@ void add_char_to_console(WINDOW *win, int ch) {
 void update_interface(WINDOW **wins, p_circ_queue_t *p) {
     char pid_text[MAXSTR];
     p_circ_queue_t *current = p;
-    int n_actives = 0;
+    int n_actives = 1;
     int helper = 0;
 
     restart_queue(wins[0]);
@@ -186,10 +186,10 @@ void update_interface(WINDOW **wins, p_circ_queue_t *p) {
     }
 
     current = p;
-    while (current->next != p) {
+    do {
         if (current->process->state == READY ||
             current->process->state == RUNNING) {
-            sprintf(pid_text, "PID: %d\n", p->process->pid);
+            sprintf(pid_text, "PID: %d\n", current->process->pid);
             /* invert the colors before printing */
             if (helper == 0) {
                 wattron(wins[0], COLOR_PAIR(5));
@@ -204,9 +204,8 @@ void update_interface(WINDOW **wins, p_circ_queue_t *p) {
                 helper += 1;
             }
         }
-
         current = current->next;
-    }
+    } while ((current != p));
 
     print_bit_map_of_processes_memory(wins[2], p);
 
@@ -218,7 +217,7 @@ void update_interface(WINDOW **wins, p_circ_queue_t *p) {
 /* read contents of file instructions.asm */
 void read_instructions_file(WINDOW *win, p_circ_queue_t *p) {
     FILE *fp;
-    char instructions[MAXSTR][10];
+    char instructions[MAXINSTS][MAXSTR];
     int i = 0;
     int j = 0;
     int k = 0;
@@ -241,6 +240,7 @@ void read_instructions_file(WINDOW *win, p_circ_queue_t *p) {
         }
 
         for (j = 0; j < i; j++) {
+            instructions[j][strcspn(instructions[j], "\r\n")] = 0;
             if (j == k) {
                 mvwprintw(win, j + 3, 3, "%s   <----\n", instructions[j]);
             } else {

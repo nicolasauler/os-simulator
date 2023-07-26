@@ -32,7 +32,8 @@ typedef struct process {
     int time_waiting;
 } process_t;
 
-enum process_state { NEW, READY, RUNNING, WAITING, TERMINATED };
+/* enum process_state { NEW, READY, RUNNING, WAITING, TERMINATED }; */
+enum process_state { READY, RUNNING, BLOCKED, TERMINATED };
 
 enum scheduler_algorithm { FIFO, ROUND_ROBIN };
 
@@ -46,6 +47,6 @@ process_t *create_process(int mem_size, uint8_t pid);
 p_circ_queue_t *add_process_to_queue(p_circ_queue_t *old_queue,
                                      process_t *process_to_add);
 p_circ_queue_t *run_process(p_circ_queue_t *queue);
-void kill_process(uint8_t pid, p_circ_queue_t *queue);
+p_circ_queue_t *kill_process(uint8_t pid, p_circ_queue_t *queue);
 
 #endif

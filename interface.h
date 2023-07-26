@@ -9,6 +9,7 @@
 #define LINES 37
 #define COLS 157
 #define MAXSTR 20
+#define MAXINSTS 20
 
 typedef struct _PANEL_DATA {
     int hide; /* TRUE if panel is hidden */
