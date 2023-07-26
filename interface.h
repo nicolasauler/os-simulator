@@ -2,7 +2,6 @@
 #define _INTERFACE_H_
 
 #include "scheduler.h"
-#include <curses.h>
 #include <ncurses.h>
 #include <panel.h>
 #include <string.h>
@@ -30,14 +29,16 @@ void do_backspace_action_on_console(WINDOW *win);
 void do_enter_action_on_console(WINDOW *win);
 void add_char_to_console(WINDOW *win, int ch);
 
-void update_interface(WINDOW **wins, struct process processo[MAXPRCS]);
+void update_interface(WINDOW **wins, p_circ_queue_t *p);
 
 void print_in_queue(WINDOW *win, int starty, int startx, int width,
                     char *string);
 
+void restart_status(WINDOW *win);
 void restart_queue(WINDOW *win);
 void restart_map(WINDOW *win);
 
-void print_bit_map_of_processes_memory(WINDOW *win, process p[MAXPRCS]);
+void print_bit_map_of_processes_memory(WINDOW *win, p_circ_queue_t *p);
+void read_instructions_file(WINDOW *win, p_circ_queue_t *p);
 
 #endif

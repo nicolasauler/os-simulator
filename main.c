@@ -1,7 +1,7 @@
-/* ncurses and panel program that has 2 windows for the user to
- * interact with as well as two panels/tabs
- * this program will be an operating system simulator
- * with a scheduler and memory manager
+/* operating systems simulator, with process management
+ * and memory management
+ * the user creates or kills processes
+ * and the program automatically runs them and updates the interface
  */
 
 #include "interface.h"
@@ -13,22 +13,16 @@
 #include <threads.h>
 #include <unistd.h>
 
-process process_list[MAXPRCS];
+p_circ_queue_t *p_queue;
 
 typedef struct {
     WINDOW **wins;
-    process *p;
+    p_circ_queue_t *p;
 } thread_args;
 
-/*
- * commands are either create -m <int>, which creates a simulated
- * process, where the -m flag specifies size of memory used and is an
- * optional flag or kill <int>, which kills a simulated process use getopt
- * */
 void process_command(WINDOW **wins, char **commands, int n_strings,
-                     process p[MAXPRCS], uint8_t *process_count);
+                     p_circ_queue_t *p, uint8_t *process_count);
 
-/* void *process_async_command(void *args); */
 char **tokenize_command(char *command, int *n_strings);
 void *kernel(void *args);
 
@@ -45,13 +39,10 @@ int main(void) {
     uint8_t process_count = 0;
 
     init_interface(my_wins, my_panels, panel_datas);
-
     show_keyboard_shortcuts();
 
-    /* launch the kernel as a separate pthread to continuously update the
-     * process so it is updated non blocking in the interface */
     args->wins = my_wins;
-    args->p = process_list;
+    args->p = p_queue;
     pthread_create(&kernel_thread, NULL, kernel, args);
 
     while (ch = getch(), ch != KEY_F(1)) {
@@ -80,21 +71,10 @@ int main(void) {
                 if (i > 0) {
                     int n_strings = 0;
                     char **commands = tokenize_command(command, &n_strings);
-                    process_command(my_wins, commands, n_strings, process_list,
+                    process_command(my_wins, commands, n_strings, p_queue,
                                     &process_count);
 
-                    update_interface(my_wins, process_list);
-
-                    /* thread_args *args = malloc(sizeof(thread_args));
-                    args->wins = my_wins;
-                    args->commands = commands;
-                    args->n_strings = n_strings;
-                    args->p = process_list;
-                    args->process_count = &process_count;
-                    pthread_t thread;
-                    pthread_create(&thread, NULL, process_async_command, args);
-                    pthread_join(thread, NULL);
-                    free(args); */
+                    update_interface(my_wins, p_queue);
                 }
                 i = 0;
             } else {
@@ -107,39 +87,43 @@ int main(void) {
     }
 
     endwin();
+    free(args);
     pthread_cancel(kernel_thread);
     return (0);
 }
 
 void *kernel(void *args) {
-    int i;
     int help;
+    struct timespec tim = {0, 50000000L};
+
     WINDOW **my_wins = ((thread_args *)args)->wins;
-    process *p = ((thread_args *)args)->p;
+    p_circ_queue_t *p = ((thread_args *)args)->p;
+
+    p_circ_queue_t *current = p;
+
     while (1) {
-        for (i = 0; i < MAXPRCS; i++) {
-            if (p[i].state == READY) {
-                p[i].state = RUNNING;
-                for (help = 0; help < p[i].mem_size; help++) {
-                    sleep(2);
-                    p[i].time_used += 1;
+        nanosleep(&tim, NULL);
+
+        if (current == NULL) {
+            continue;
+        }
+
+        while (current->next != p) {
+            if (p->process->state == READY) {
+                p->process->state = RUNNING;
+                for (help = 0; help < p->process->mem_size; help++) {
+                    run_process(p);
+                    sleep(5);
+                    update_interface(my_wins, p_queue);
                 }
-                p[i].state = TERMINATED;
-                update_interface(my_wins, process_list);
+                p->process->state = TERMINATED;
                 break;
             }
+            current = current->next;
         }
     }
     pthread_exit(NULL);
 }
-
-/*
-void *process_async_command(void *args) {
-    thread_args *t_args = (thread_args *)args;
-    process_command(t_args->wins, t_args->commands, t_args->n_strings,
-                    t_args->p, t_args->process_count);
-    pthread_exit(NULL);
-} */
 
 char **tokenize_command(char *command, int *n_strings) {
     char *token = strtok(command, " ");
@@ -155,10 +139,12 @@ char **tokenize_command(char *command, int *n_strings) {
 }
 
 void process_command(WINDOW **wins, char **commands, int n_strings,
-                     process p[MAXPRCS], uint8_t *process_count) {
+                     p_circ_queue_t *p, uint8_t *process_count) {
     if (strcmp(commands[0], "create") == 0) {
         int opt;
+        process_t *p1;
         int mem_size = 0;
+
         optind = 0;
         while ((opt = getopt(n_strings, commands, "m:")) != -1) {
             switch (opt) {
@@ -172,7 +158,9 @@ void process_command(WINDOW **wins, char **commands, int n_strings,
         if (mem_size == 0) {
             mem_size = 1;
         }
-        create_process((*process_count), mem_size, p);
+
+        p1 = create_process(mem_size, (*process_count));
+        p = add_process_to_queue(p, p1);
         (*process_count) += 1;
         wprintw(wins[3], "create process with %d memory\n", mem_size);
     } else if (strcmp(commands[0], "kill") == 0) {

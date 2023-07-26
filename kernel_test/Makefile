@@ -1,10 +1,9 @@
 CC=gcc
-# add nanosleep with posix source
-CFLAGS=-Wall -Wextra -Wshadow -ansi -pedantic -g -D_POSIX_C_SOURCE=199309L
-LDFLAGS=-lncurses -lpanel -lpthread
-SOURCES=main.c interface.c scheduler.c
+CFLAGS=-Wall -Wextra -Wshadow -std=c99 -pedantic -g
+#LDFLAGS=
+SOURCES=kernel.c
 OBJECTS=$(SOURCES:.c=.o)
-EXECUTABLE=main
+EXECUTABLE=kernel
 
 all: $(SOURCES) $(EXECUTABLE)
 

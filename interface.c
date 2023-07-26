@@ -1,8 +1,8 @@
 #include "interface.h"
+#include "scheduler.h"
 
 extern struct _PANEL_DATA panel_data;
 
-/* Put all the windows */
 void init_wins(WINDOW **wins, int n) {
     int i;
     char label[80];
@@ -72,12 +72,11 @@ void show_commands(WINDOW *console) {
     getyx(console, y, x);
     wmove(console, y, x = 4);
     mvwaddstr(console, y, x, "create - create a new process\n");
-    mvwaddstr(console, y + 1, x, "         create [priority] [time]\n");
-    mvwaddstr(console, y + 2, x, "         priority: 0 - 3\n");
-    mvwaddstr(console, y + 3, x, "         mem: 1 - 20\n");
-    mvwaddstr(console, y + 4, x, "kill - kill a process\n");
-    mvwaddstr(console, y + 5, x, "         delete [pid]\n");
-    mvwaddstr(console, y + 6, x, "         pid: 1 - 64\n");
+    mvwaddstr(console, y + 1, x, "         create -m [mem] \n");
+    mvwaddstr(console, y + 2, x, "         mem: 1 - 20\n");
+    mvwaddstr(console, y + 3, x, "kill - kill a process\n");
+    mvwaddstr(console, y + 4, x, "         delete [pid]\n");
+    mvwaddstr(console, y + 5, x, "         pid: 1 - 64\n");
     wrefresh(console);
 }
 
@@ -165,24 +164,32 @@ void add_char_to_console(WINDOW *win, int ch) {
     wmove(win, y, x + 1);
 }
 
-/* print process p to whe window 1 */
-void update_interface(WINDOW **wins, process p[MAXPRCS]) {
-    int i;
+void update_interface(WINDOW **wins, p_circ_queue_t *p) {
+    char pid_text[MAXSTR];
+    p_circ_queue_t *current = p;
     int n_actives = 0;
     int helper = 0;
-    char pid_text[MAXSTR];
 
     restart_queue(wins[0]);
     wmove(wins[0], 1, 1);
 
-    for (i = 0; i < MAXPRCS; i++) {
-        if (p[i].state == READY || p[i].state == RUNNING) {
+    if (p == NULL) {
+        return;
+    }
+
+    while (current->next != p) {
+        if (current->process->state == READY ||
+            current->process->state == RUNNING) {
             n_actives += 1;
         }
+        current = current->next;
     }
-    for (i = 0; i < MAXPRCS; i++) {
-        if (p[i].state == READY || p[i].state == RUNNING) {
-            sprintf(pid_text, "PID: %d\n", p[i].pid);
+
+    current = p;
+    while (current->next != p) {
+        if (current->process->state == READY ||
+            current->process->state == RUNNING) {
+            sprintf(pid_text, "PID: %d\n", p->process->pid);
             /* invert the colors before printing */
             if (helper == 0) {
                 wattron(wins[0], COLOR_PAIR(5));
@@ -197,12 +204,53 @@ void update_interface(WINDOW **wins, process p[MAXPRCS]) {
                 helper += 1;
             }
         }
+
+        current = current->next;
     }
 
-    /* print a matrix of 6 by 6 zeros in win[2] */
     print_bit_map_of_processes_memory(wins[2], p);
 
+    read_instructions_file(wins[1], p);
+
     doupdate();
+}
+
+/* read contents of file instructions.asm */
+void read_instructions_file(WINDOW *win, p_circ_queue_t *p) {
+    FILE *fp;
+    char instructions[MAXSTR][10];
+    int i = 0;
+    int j = 0;
+    int k = 0;
+    p_circ_queue_t *current = p;
+
+    restart_status(win);
+
+    fp = fopen("instructions.asm", "r");
+    if (fp != NULL) {
+        while (fgets(instructions[i], MAXSTR, fp) != NULL) {
+            i += 1;
+        }
+
+        while (current->next != p) {
+            if (current->process->state == RUNNING) {
+                k = current->process->time_used;
+                break;
+            }
+            current = current->next;
+        }
+
+        for (j = 0; j < i; j++) {
+            if (j == k) {
+                mvwprintw(win, j + 3, 3, "%s   <----\n", instructions[j]);
+            } else {
+                mvwprintw(win, j + 3, 3, "%s\n", instructions[j]);
+            }
+        }
+        fclose(fp);
+    }
+
+    wrefresh(win);
 }
 
 void print_in_queue(WINDOW *win, int starty, int startx, int width,
@@ -231,6 +279,15 @@ void print_in_queue(WINDOW *win, int starty, int startx, int width,
     refresh();
 }
 
+void restart_status(WINDOW *win) {
+    char label[MAXSTR];
+    werase(win);
+    sprintf(label, "Status");
+    win_show(win, label, 2);
+    wrefresh(win);
+    doupdate();
+}
+
 void restart_queue(WINDOW *win) {
     char label[MAXSTR];
     werase(win);
@@ -249,7 +306,7 @@ void restart_map(WINDOW *win) {
     doupdate();
 }
 
-void print_bit_map_of_processes_memory(WINDOW *win, process p[MAXPRCS]) {
+void print_bit_map_of_processes_memory(WINDOW *win, p_circ_queue_t *p) {
     int i, j;
     int x, y;
     float scalex, scaley;
@@ -261,7 +318,8 @@ void print_bit_map_of_processes_memory(WINDOW *win, process p[MAXPRCS]) {
     for (i = 0; i < 6; i++) {
         for (j = 0; j < 6; j++) {
             /* print zeros to populate a map throughout the window */
-            mvwprintw(win, 2 + ((i + 1) * scaley), ((j + 0.75) * scalex), "%d", 0);
+            mvwprintw(win, 2 + ((i + 1) * scaley), ((j + 0.75) * scalex), "%d",
+                      0);
         }
     }
     refresh();
