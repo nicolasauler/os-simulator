@@ -22,6 +22,7 @@ void process_command(WINDOW **wins, char **commands, int n_strings,
                      p_circ_queue_t **p, uint8_t *process_count);
 char **tokenize_command(char *command, int *n_strings);
 void *kernel(void *args);
+void logger(const char *message);
 
 int main(void) {
     WINDOW *my_wins[4];
@@ -93,7 +94,9 @@ int main(void) {
 
 void *kernel(void *args) {
     int help;
-    struct timespec tim = {0, 50000000L};
+    char logging_text[50];
+    struct timespec tim = {0, 500000000L};
+    /* struct timespec tim = {0, 50000000L}; */
 
     WINDOW **my_wins = ((thread_args *)args)->wins;
     p_circ_queue_t *p = ((thread_args *)args)->p;
@@ -104,15 +107,23 @@ void *kernel(void *args) {
         nanosleep(&tim, NULL);
 
         if (current == NULL) {
+            logger("no processes");
             continue;
         }
 
+        sprintf(logging_text, "current pid: %d", current->process->mem_size);
+        logger(logging_text);
+
+        /*
         do {
             if (p->process->state == READY) {
                 p->process->state = RUNNING;
                 for (help = 0; help < p->process->mem_size; help++) {
+                    sprintf(logging_text, "running process: %d", help);
+                    logger(logging_text);
                     run_process(p);
-                    sleep(8);
+
+                    sleep(5);
                     update_interface(my_wins, p);
                 }
                 p->process->state = TERMINATED;
@@ -120,6 +131,7 @@ void *kernel(void *args) {
             }
             current = current->next;
         } while (current != p);
+        */
     }
     pthread_exit(NULL);
 }
@@ -175,4 +187,12 @@ void process_command(WINDOW **wins, char **commands, int n_strings,
     }
 
     free(commands);
+}
+
+/* function to log thread execution to file */
+void logger(const char *message) {
+    FILE *fp;
+    fp = fopen("log.txt", "a");
+    fprintf(fp, "%s\n", message);
+    fclose(fp);
 }
