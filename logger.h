@@ -3,6 +3,7 @@
 
 #include <stdio.h>
 
+void log_init(void);
 void logger(const char *message);
 
 #endif

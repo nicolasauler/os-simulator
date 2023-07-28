@@ -36,6 +36,7 @@ int main(void) {
 
     init_interface(my_wins, my_panels, panel_datas);
     show_keyboard_shortcuts();
+    log_init();
 
     args->wins = my_wins;
     args->p = p_queue;
