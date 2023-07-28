@@ -1,5 +1,4 @@
 #include "scheduler.h"
-#include <stdlib.h>
 
 process_t *create_process(int mem_size, uint8_t pid) {
     process_t *new_process = malloc(sizeof(process_t));
@@ -37,29 +36,31 @@ p_circ_queue_t *add_process_to_queue(p_circ_queue_t *old_queue,
     return old_queue;
 }
 
-p_circ_queue_t *run_process(p_circ_queue_t *queue) {
-    p_circ_queue_t *current = queue;
+p_circ_queue_t *run_process(p_circ_queue_t *old_queue) {
+    p_circ_queue_t *current = old_queue;
 
-    if (queue == NULL) {
+    if (old_queue == NULL) {
         return NULL;
+    }
+
+    while (current->process->state != READY) {
+        if (current->next == old_queue) {
+            return old_queue;
+        }
+        current = current->next;
     }
 
     if (current->process->time_remaining > 0) {
         current->process->time_remaining--;
         current->process->time_used++;
-        return current;
+        return old_queue;
     } else {
-        while (current->next != queue) {
-            current = current->next;
-        }
-        current->next = queue->next;
-        queue->next->prev = current;
-        free(queue);
-        return current->next;
+        current->process->state = TERMINATED;
+        return old_queue->next;
     }
 }
 
-p_circ_queue_t *kill_process(uint8_t pid, p_circ_queue_t *queue) {
+p_circ_queue_t *kill_process(int32_t pid, p_circ_queue_t *queue) {
     p_circ_queue_t *current = queue;
 
     if (queue == NULL) {

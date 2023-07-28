@@ -5,13 +5,12 @@
  */
 
 #include "interface.h"
+#include "logger.h"
 #include "scheduler.h"
-#include <getopt.h>
 #include <pthread.h>
-#include <stdint.h>
-#include <stdlib.h>
-#include <threads.h>
 #include <unistd.h>
+
+p_circ_queue_t *p_queue = NULL;
 
 typedef struct {
     WINDOW **wins;
@@ -22,7 +21,6 @@ void process_command(WINDOW **wins, char **commands, int n_strings,
                      p_circ_queue_t **p, uint8_t *process_count);
 char **tokenize_command(char *command, int *n_strings);
 void *kernel(void *args);
-void logger(const char *message);
 
 int main(void) {
     WINDOW *my_wins[4];
@@ -35,8 +33,6 @@ int main(void) {
     thread_args *args = malloc(sizeof(thread_args));
     int i = 0;
     uint8_t process_count = 0;
-
-    p_circ_queue_t *p_queue = NULL;
 
     init_interface(my_wins, my_panels, panel_datas);
     show_keyboard_shortcuts();
@@ -79,7 +75,12 @@ int main(void) {
                 i = 0;
             } else {
                 add_char_to_console(my_wins[3], ch);
-                command[i++] = ch;
+                if (ch > CHAR_MAX) {
+                    logger("invalid character, user inputted not ascii");
+                    continue;
+                } else {
+                    command[i++] = (char)ch;
+                }
             }
         }
         update_panels();
@@ -93,47 +94,21 @@ int main(void) {
 }
 
 void *kernel(void *args) {
-    int help;
-    char logging_text[50];
-    struct timespec tim = {0, 500000000L};
-    /* struct timespec tim = {0, 50000000L}; */
+    struct timespec tim = {0, 50000000L};
 
     WINDOW **my_wins = ((thread_args *)args)->wins;
-    p_circ_queue_t *p = ((thread_args *)args)->p;
-
-    p_circ_queue_t *current = p;
 
     while (1) {
         nanosleep(&tim, NULL);
 
-        if (current == NULL) {
-            logger("no processes");
+        if (p_queue == NULL) {
             continue;
         }
 
-        sprintf(logging_text, "current pid: %d", current->process->mem_size);
-        logger(logging_text);
-
-        /*
-        do {
-            if (p->process->state == READY) {
-                p->process->state = RUNNING;
-                for (help = 0; help < p->process->mem_size; help++) {
-                    sprintf(logging_text, "running process: %d", help);
-                    logger(logging_text);
-                    run_process(p);
-
-                    sleep(5);
-                    update_interface(my_wins, p);
-                }
-                p->process->state = TERMINATED;
-                break;
-            }
-            current = current->next;
-        } while (current != p);
-        */
+        p_queue = run_process(p_queue);
+        sleep(5);
+        update_interface(my_wins, p_queue);
     }
-    pthread_exit(NULL);
 }
 
 char **tokenize_command(char *command, int *n_strings) {
@@ -178,7 +153,7 @@ void process_command(WINDOW **wins, char **commands, int n_strings,
         if (n_strings != 2) {
             show_commands(wins[3]);
         } else {
-            int pid = atoi(commands[1]);
+            int32_t pid = atoi(commands[1]);
             (*p) = kill_process(pid, (*p));
             wprintw(wins[3], "kill process %d\n", pid);
         }
@@ -187,12 +162,4 @@ void process_command(WINDOW **wins, char **commands, int n_strings,
     }
 
     free(commands);
-}
-
-/* function to log thread execution to file */
-void logger(const char *message) {
-    FILE *fp;
-    fp = fopen("log.txt", "a");
-    fprintf(fp, "%s\n", message);
-    fclose(fp);
 }

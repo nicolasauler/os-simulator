@@ -1,7 +1,9 @@
 #ifndef _INTERFACE_H_
 #define _INTERFACE_H_
 
+#include "logger.h"
 #include "scheduler.h"
+#include <limits.h>
 #include <ncurses.h>
 #include <panel.h>
 #include <string.h>
@@ -19,7 +21,7 @@ extern struct process processo;
 
 void init_wins(WINDOW **wins, int n);
 void win_show(WINDOW *win, char *label, int label_color);
-void print_in_middle(WINDOW *win, int starty, int startx, int width,
+void print_in_middle(WINDOW *win, int starty, int startx, uint64_t width,
                      char *string, chtype color);
 void show_commands(WINDOW *win);
 void init_interface(WINDOW **my_wins, PANEL **my_panels,
@@ -31,9 +33,6 @@ void do_enter_action_on_console(WINDOW *win);
 void add_char_to_console(WINDOW *win, int ch);
 
 void update_interface(WINDOW **wins, p_circ_queue_t *p);
-
-void print_in_queue(WINDOW *win, int starty, int startx, int width,
-                    char *string);
 
 void restart_status(WINDOW *win);
 void restart_queue(WINDOW *win);

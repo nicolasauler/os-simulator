@@ -25,24 +25,32 @@ void init_wins(WINDOW **wins, int n) {
 
 /* show the window with a border and a label */
 void win_show(WINDOW *win, char *label, int label_color) {
-    int width;
+    int32_t width;
+    uint64_t width_conv;
     __attribute__((unused)) int height;
 
     getmaxyx(win, height, width);
+    if (width < 0) {
+        logger("ERROR: width < 0");
+        exit(EXIT_FAILURE);
+    } else {
+        width_conv = (uint64_t)width;
+    }
 
     box(win, 0, 0);
     mvwaddch(win, 2, 0, ACS_LTEE);
     mvwhline(win, 2, 1, ACS_HLINE, width - 2);
     mvwaddch(win, 2, width - 1, ACS_RTEE);
 
-    print_in_middle(win, 1, 0, width, label, COLOR_PAIR(label_color));
+    print_in_middle(win, 1, 0, width_conv, label, COLOR_PAIR(label_color));
 }
 
 /* print a string in the middle of a window */
-void print_in_middle(WINDOW *win, int starty, int startx, int width,
+void print_in_middle(WINDOW *win, int starty, int startx, uint64_t width,
                      char *string, chtype color) {
-    int length, x, y;
-    float temp;
+    int x, y;
+    uint64_t temp, length;
+    int32_t tmp_conv;
 
     if (win == NULL) {
         win = stdscr;
@@ -59,8 +67,16 @@ void print_in_middle(WINDOW *win, int starty, int startx, int width,
     }
 
     length = strlen(string);
-    temp = (float)(width - length) / 2;
-    x = startx + (int)temp;
+    temp = (width - length) / 2;
+
+    if (temp > INT32_MAX) {
+        logger("ERROR: temp > MAX_INT32");
+        exit(EXIT_FAILURE);
+    } else {
+        tmp_conv = (int32_t)temp;
+    }
+
+    x = startx + tmp_conv;
     wattron(win, color);
     mvwprintw(win, y, x, "%s", string);
     wattroff(win, color);
@@ -253,31 +269,6 @@ void read_instructions_file(WINDOW *win, p_circ_queue_t *p) {
     wrefresh(win);
 }
 
-void print_in_queue(WINDOW *win, int starty, int startx, int width,
-                    char *string) {
-    int length, x, y;
-    float temp;
-
-    if (win == NULL) {
-        win = stdscr;
-    }
-    getyx(win, y, x);
-    if (startx != 0) {
-        x = startx;
-    }
-    if (starty != 0) {
-        y = starty;
-    }
-    if (width == 0) {
-        width = 80;
-    }
-
-    length = strlen(string);
-    temp = (float)(width - length) / 2;
-    x = startx + (int)temp;
-    mvwprintw(win, y, x, "%s", string);
-    refresh();
-}
 
 void restart_status(WINDOW *win) {
     char label[MAXSTR];
@@ -309,15 +300,14 @@ void restart_map(WINDOW *win) {
 void print_bit_map_of_processes_memory(WINDOW *win, p_circ_queue_t *p) {
     int i, j;
     int x, y;
-    float scalex, scaley;
+    int32_t scalex, scaley;
     restart_map(win);
     getmaxyx(win, y, x);
-    scalex = (float)(x - 6) / 6;
-    scaley = (float)(y - 6) / 6;
+    scalex = (x - 6) / 6;
+    scaley = (y - 6) / 6;
     wmove(win, 1, 1);
     for (i = 0; i < 6; i++) {
         for (j = 0; j < 6; j++) {
-            /* print zeros to populate a map throughout the window */
             mvwprintw(win, 2 + ((i + 1) * scaley), ((j + 0.75) * scalex), "%d",
                       0);
         }

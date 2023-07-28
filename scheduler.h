@@ -2,6 +2,7 @@
 #define _SCHEDULER_H_
 
 #include <stdint.h>
+#include <stdlib.h>
 
 /*
         p[i].pid = -1;
@@ -47,6 +48,6 @@ process_t *create_process(int mem_size, uint8_t pid);
 p_circ_queue_t *add_process_to_queue(p_circ_queue_t *old_queue,
                                      process_t *process_to_add);
 p_circ_queue_t *run_process(p_circ_queue_t *queue);
-p_circ_queue_t *kill_process(uint8_t pid, p_circ_queue_t *queue);
+p_circ_queue_t *kill_process(int32_t pid, p_circ_queue_t *queue);
 
 #endif
