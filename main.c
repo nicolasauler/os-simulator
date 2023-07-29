@@ -10,15 +10,15 @@
 #include <pthread.h>
 #include <unistd.h>
 
-p_circ_queue_t *p_queue = NULL;
+p_queue_t *p_queue = NULL;
 
 typedef struct {
     WINDOW **wins;
-    p_circ_queue_t *p;
+    PANEL **panels;
 } thread_args;
 
 void process_command(WINDOW **wins, char **commands, int n_strings,
-                     p_circ_queue_t **p, uint8_t *process_count);
+                     p_queue_t **p, uint8_t *process_count);
 char **tokenize_command(char *command, int *n_strings);
 void *kernel(void *args);
 
@@ -39,7 +39,7 @@ int main(void) {
     log_init();
 
     args->wins = my_wins;
-    args->p = p_queue;
+    args->panels = my_panels;
     pthread_create(&kernel_thread, NULL, kernel, args);
 
     while (ch = getch(), ch != KEY_F(1)) {
@@ -70,8 +70,7 @@ int main(void) {
                     char **commands = tokenize_command(command, &n_strings);
                     process_command(my_wins, commands, n_strings, &p_queue,
                                     &process_count);
-
-                    update_interface(my_wins, p_queue);
+                    update_interface(my_wins, my_panels, p_queue);
                 }
                 i = 0;
             } else {
@@ -98,6 +97,7 @@ void *kernel(void *args) {
     struct timespec tim = {0, 50000000L};
 
     WINDOW **my_wins = ((thread_args *)args)->wins;
+    PANEL **my_panels = ((thread_args *)args)->panels;
 
     while (1) {
         nanosleep(&tim, NULL);
@@ -108,7 +108,7 @@ void *kernel(void *args) {
 
         p_queue = run_process(p_queue);
         sleep(5);
-        update_interface(my_wins, p_queue);
+        update_interface(my_wins, my_panels, p_queue);
     }
 }
 
@@ -126,7 +126,7 @@ char **tokenize_command(char *command, int *n_strings) {
 }
 
 void process_command(WINDOW **wins, char **commands, int n_strings,
-                     p_circ_queue_t **p, uint8_t *process_count) {
+                     p_queue_t **p, uint8_t *process_count) {
     if (strcmp(commands[0], "create") == 0) {
         int opt;
         process_t *p1;

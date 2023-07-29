@@ -1,5 +1,6 @@
 #include "interface.h"
 #include "scheduler.h"
+#include <panel.h>
 
 extern struct _PANEL_DATA panel_data;
 
@@ -180,21 +181,31 @@ void add_char_to_console(WINDOW *win, int ch) {
     wmove(win, y, x + 1);
 }
 
-void update_interface(WINDOW **wins, p_circ_queue_t *p) {
+void reset_panels(PANEL **panels) {
+    PANEL_DATA *temp;
+    if ((temp = ((PANEL_DATA *)panel_userptr(panels[3])))->hide == FALSE) {
+        hide_panel(panels[3]);
+        temp->hide = TRUE;
+        show_panel(panels[3]);
+        temp->hide = FALSE;
+    }
+}
+
+void update_interface(WINDOW **wins, PANEL **panels, p_queue_t *p) {
     char pid_text[MAXSTR];
-    p_circ_queue_t *current = p;
+    p_queue_t *current = p;
     int n_actives = 1;
     int helper = 0;
-
-    restart_queue(wins[0]);
-    wmove(wins[0], 1, 1);
 
     if (p == NULL) {
         return;
     }
 
-    while (current->next != p) {
-        if (current->process->state == READY ||
+    restart_queue(wins[0]);
+    wmove(wins[0], 1, 1);
+
+    while (current->next != NULL) {
+        if (current->process->state == READY || /* segfault */
             current->process->state == RUNNING) {
             n_actives += 1;
         }
@@ -221,23 +232,24 @@ void update_interface(WINDOW **wins, p_circ_queue_t *p) {
             }
         }
         current = current->next;
-    } while ((current != p));
+    } while ((current != NULL));
 
     print_bit_map_of_processes_memory(wins[2], p);
-
     read_instructions_file(wins[1], p);
 
+    reset_panels(panels);
+    update_panels();
     doupdate();
 }
 
 /* read contents of file instructions.asm */
-void read_instructions_file(WINDOW *win, p_circ_queue_t *p) {
+void read_instructions_file(WINDOW *win, p_queue_t *p) {
     FILE *fp;
     char instructions[MAXINSTS][MAXSTR];
     int i = 0;
     int j = 0;
     int k = 0;
-    p_circ_queue_t *current = p;
+    p_queue_t *current = p;
 
     restart_status(win);
 
@@ -247,12 +259,14 @@ void read_instructions_file(WINDOW *win, p_circ_queue_t *p) {
             i += 1;
         }
 
-        while (current->next != p) {
-            if (current->process->state == RUNNING) {
-                k = current->process->time_used;
-                break;
+        if (p != NULL) {
+            while (current->next != NULL) {
+                if (current->process->state == RUNNING) {
+                    k = current->process->time_used;
+                    break;
+                }
+                current = current->next;
             }
-            current = current->next;
         }
 
         for (j = 0; j < i; j++) {
@@ -268,7 +282,6 @@ void read_instructions_file(WINDOW *win, p_circ_queue_t *p) {
 
     wrefresh(win);
 }
-
 
 void restart_status(WINDOW *win) {
     char label[MAXSTR];
@@ -297,7 +310,7 @@ void restart_map(WINDOW *win) {
     doupdate();
 }
 
-void print_bit_map_of_processes_memory(WINDOW *win, p_circ_queue_t *p) {
+void print_bit_map_of_processes_memory(WINDOW *win, p_queue_t *p) {
     int i, j;
     int x, y;
     int32_t scalex, scaley;

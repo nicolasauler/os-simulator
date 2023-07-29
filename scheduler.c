@@ -13,38 +13,37 @@ process_t *create_process(int mem_size, uint8_t pid) {
     return new_process;
 }
 
-p_circ_queue_t *add_process_to_queue(p_circ_queue_t *old_queue,
-                                     process_t *process_to_add) {
-    p_circ_queue_t *new_queue = malloc(sizeof(p_circ_queue_t));
-    p_circ_queue_t *current = old_queue;
+p_queue_t *add_process_to_queue(p_queue_t *old_queue,
+                                process_t *process_to_add) {
+    p_queue_t *new_queue = malloc(sizeof(p_queue_t));
+    p_queue_t *current = old_queue;
 
     new_queue->process = process_to_add;
+    new_queue->next = NULL;
 
     if (old_queue == NULL) {
-        new_queue->next = new_queue;
-        new_queue->prev = new_queue;
+        new_queue->prev = NULL;
         return new_queue;
     }
 
-    while (current->next != old_queue) {
+    while (current->next != NULL) {
         current = current->next;
     }
-    current->next = new_queue;
+
     new_queue->prev = current;
-    new_queue->next = old_queue;
-    old_queue->prev = new_queue;
+    current->next = new_queue;
     return old_queue;
 }
 
-p_circ_queue_t *run_process(p_circ_queue_t *old_queue) {
-    p_circ_queue_t *current = old_queue;
+p_queue_t *run_process(p_queue_t *old_queue) {
+    p_queue_t *current = old_queue;
 
     if (old_queue == NULL) {
         return NULL;
     }
 
     while (current->process->state != READY) {
-        if (current->next == old_queue) {
+        if (current->next == NULL) {
             return old_queue;
         }
         current = current->next;
@@ -53,15 +52,16 @@ p_circ_queue_t *run_process(p_circ_queue_t *old_queue) {
     if (current->process->time_remaining > 0) {
         current->process->time_remaining--;
         current->process->time_used++;
+        current->process->state = RUNNING;
         return old_queue;
     } else {
         current->process->state = TERMINATED;
-        return old_queue->next;
+        return old_queue;
     }
 }
 
-p_circ_queue_t *kill_process(int32_t pid, p_circ_queue_t *queue) {
-    p_circ_queue_t *current = queue;
+p_queue_t *kill_process(int32_t pid, p_queue_t *queue) {
+    p_queue_t *current = queue;
 
     if (queue == NULL) {
         return NULL;
@@ -71,7 +71,7 @@ p_circ_queue_t *kill_process(int32_t pid, p_circ_queue_t *queue) {
         current = current->next;
     }
 
-    if (current->next == current) {
+    if (current->next == NULL || current->prev == NULL) {
         free(current);
         return NULL;
     }

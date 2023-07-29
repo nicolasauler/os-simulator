@@ -38,16 +38,16 @@ enum process_state { READY, RUNNING, BLOCKED, TERMINATED };
 
 enum scheduler_algorithm { FIFO, ROUND_ROBIN };
 
-typedef struct p_circ_queue {
+typedef struct p_queue {
     process_t *process;
-    struct p_circ_queue *prev;
-    struct p_circ_queue *next;
-} p_circ_queue_t;
+    struct p_queue *prev;
+    struct p_queue *next;
+} p_queue_t;
 
 process_t *create_process(int mem_size, uint8_t pid);
-p_circ_queue_t *add_process_to_queue(p_circ_queue_t *old_queue,
+p_queue_t *add_process_to_queue(p_queue_t *old_queue,
                                      process_t *process_to_add);
-p_circ_queue_t *run_process(p_circ_queue_t *queue);
-p_circ_queue_t *kill_process(int32_t pid, p_circ_queue_t *queue);
+p_queue_t *run_process(p_queue_t *queue);
+p_queue_t *kill_process(int32_t pid, p_queue_t *queue);
 
 #endif

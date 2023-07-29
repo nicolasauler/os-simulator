@@ -32,13 +32,13 @@ void do_backspace_action_on_console(WINDOW *win);
 void do_enter_action_on_console(WINDOW *win);
 void add_char_to_console(WINDOW *win, int ch);
 
-void update_interface(WINDOW **wins, p_circ_queue_t *p);
+void update_interface(WINDOW **wins, PANEL **panels, p_queue_t *p);
 
 void restart_status(WINDOW *win);
 void restart_queue(WINDOW *win);
 void restart_map(WINDOW *win);
 
-void print_bit_map_of_processes_memory(WINDOW *win, p_circ_queue_t *p);
-void read_instructions_file(WINDOW *win, p_circ_queue_t *p);
+void print_bit_map_of_processes_memory(WINDOW *win, p_queue_t *p);
+void read_instructions_file(WINDOW *win, p_queue_t *p);
 
 #endif
