@@ -232,7 +232,7 @@ void update_interface(WINDOW **wins, PANEL **panels, p_queue_t *p) {
             }
         }
         current = current->next;
-    } while ((current != NULL));
+    } while (current != NULL);
 
     print_bit_map_of_processes_memory(wins[2], p);
     read_instructions_file(wins[1], p);
@@ -242,7 +242,6 @@ void update_interface(WINDOW **wins, PANEL **panels, p_queue_t *p) {
     doupdate();
 }
 
-/* read contents of file instructions.asm */
 void read_instructions_file(WINDOW *win, p_queue_t *p) {
     FILE *fp;
     char instructions[MAXINSTS][MAXSTR];
@@ -260,13 +259,13 @@ void read_instructions_file(WINDOW *win, p_queue_t *p) {
         }
 
         if (p != NULL) {
-            while (current->next != NULL) {
+            do {
                 if (current->process->state == RUNNING) {
                     k = current->process->time_used;
                     break;
                 }
                 current = current->next;
-            }
+            } while (current != NULL);
         }
 
         for (j = 0; j < i; j++) {

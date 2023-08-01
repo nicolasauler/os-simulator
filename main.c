@@ -107,7 +107,7 @@ void *kernel(void *args) {
         }
 
         p_queue = run_process(p_queue);
-        sleep(5);
+        sleep(1);
         update_interface(my_wins, my_panels, p_queue);
     }
 }

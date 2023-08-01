@@ -22,21 +22,21 @@
         p[i].time_response = 0;
         */
 
+/* enum process_state { NEW, READY, RUNNING, WAITING, TERMINATED }; */
+enum process_state { READY, RUNNING, BLOCKED, TERMINATED };
+
+enum scheduler_algorithm { FIFO, ROUND_ROBIN };
+
 typedef struct process {
     uint8_t pid;
     int mem_size;
     int mem_start;
-    uint8_t state;
+    enum process_state state;
     int time_quantum;
     int time_remaining;
     int time_used;
     int time_waiting;
 } process_t;
-
-/* enum process_state { NEW, READY, RUNNING, WAITING, TERMINATED }; */
-enum process_state { READY, RUNNING, BLOCKED, TERMINATED };
-
-enum scheduler_algorithm { FIFO, ROUND_ROBIN };
 
 typedef struct p_queue {
     process_t *process;
@@ -46,7 +46,7 @@ typedef struct p_queue {
 
 process_t *create_process(int mem_size, uint8_t pid);
 p_queue_t *add_process_to_queue(p_queue_t *old_queue,
-                                     process_t *process_to_add);
+                                process_t *process_to_add);
 p_queue_t *run_process(p_queue_t *queue);
 p_queue_t *kill_process(int32_t pid, p_queue_t *queue);
 
