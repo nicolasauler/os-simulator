@@ -205,7 +205,7 @@ void update_interface(WINDOW **wins, PANEL **panels, p_queue_t *p) {
     wmove(wins[0], 1, 1);
 
     while (current->next != NULL) {
-        if (current->process->state == READY || /* segfault */
+        if (current->process->state == READY ||
             current->process->state == RUNNING) {
             n_actives += 1;
         }

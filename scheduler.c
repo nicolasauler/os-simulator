@@ -42,7 +42,8 @@ p_queue_t *run_process(p_queue_t *old_queue) {
         return NULL;
     }
 
-    while (current->process->state != READY) {
+    while (current->process->state != READY &&
+           current->process->state != RUNNING) {
         if (current->next == NULL) {
             return old_queue;
         }
