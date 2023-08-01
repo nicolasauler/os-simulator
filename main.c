@@ -6,6 +6,7 @@
 
 #include "interface.h"
 #include "logger.h"
+#include "mmu.h"
 #include "scheduler.h"
 #include <pthread.h>
 #include <unistd.h>
@@ -15,14 +16,16 @@ p_queue_t *p_queue = NULL;
 typedef struct {
     WINDOW **wins;
     PANEL **panels;
+    sched_info_t sched_info;
 } thread_args;
 
 void process_command(WINDOW **wins, char **commands, int n_strings,
                      p_queue_t **p, uint8_t *process_count);
 char **tokenize_command(char *command, int *n_strings);
 void *kernel(void *args);
+sched_info_t parse_args(int argc, char **argv);
 
-int main(void) {
+int main(int argc, char **argv) {
     WINDOW *my_wins[4];
     PANEL *my_panels[4];
     PANEL_DATA panel_datas[4];
@@ -33,13 +36,18 @@ int main(void) {
     thread_args *args = malloc(sizeof(thread_args));
     int i = 0;
     uint8_t process_count = 0;
+    sched_info_t sched_info;
 
+    init_mem();
     init_interface(my_wins, my_panels, panel_datas);
     show_keyboard_shortcuts();
     log_init();
 
+    sched_info = parse_args(argc, argv);
+
     args->wins = my_wins;
     args->panels = my_panels;
+    args->sched_info = sched_info;
     pthread_create(&kernel_thread, NULL, kernel, args);
 
     while (ch = getch(), ch != KEY_F(1)) {
@@ -98,6 +106,7 @@ void *kernel(void *args) {
 
     WINDOW **my_wins = ((thread_args *)args)->wins;
     PANEL **my_panels = ((thread_args *)args)->panels;
+    sched_info_t sched_info = ((thread_args *)args)->sched_info;
 
     while (1) {
         nanosleep(&tim, NULL);
@@ -106,7 +115,7 @@ void *kernel(void *args) {
             continue;
         }
 
-        p_queue = run_process(p_queue);
+        p_queue = run_process(p_queue, sched_info);
         sleep(1);
         update_interface(my_wins, my_panels, p_queue);
     }
@@ -163,4 +172,30 @@ void process_command(WINDOW **wins, char **commands, int n_strings,
     }
 
     free(commands);
+}
+
+/* programs receives as argument if the scheduler will be run in FIFO or RR mode
+ * and what is the quantum, for the latter */
+/* program will be run: ./main [FIFO|RR] -q [quantum], and the quantum is an
+ * optional argument, defaulting to 2 */
+/* parse using getopt */
+sched_info_t parse_args(int argc, char **argv) {
+    sched_info_t sched_info;
+    int opt;
+
+    sched_info.algorithm = FIFO;
+    sched_info.time_quantum = 2;
+
+    while ((opt = getopt(argc, argv, "q:")) != -1) {
+        switch (opt) {
+        case 'q':
+            sched_info.algorithm = RR;
+            sched_info.time_quantum = atoi(optarg);
+            break;
+        default:
+            break;
+        }
+    }
+
+    return sched_info;
 }

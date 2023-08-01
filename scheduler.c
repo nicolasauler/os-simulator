@@ -1,10 +1,11 @@
 #include "scheduler.h"
+#include "mmu.h"
 
 process_t *create_process(int mem_size, uint8_t pid) {
     process_t *new_process = malloc(sizeof(process_t));
     new_process->pid = pid;
     new_process->mem_size = mem_size;
-    new_process->mem_start = 0;
+    new_process->mem_start = first_fit_mem(mem_size);
     new_process->state = READY;
     new_process->time_quantum = 0;
     new_process->time_remaining = 10;
@@ -35,7 +36,7 @@ p_queue_t *add_process_to_queue(p_queue_t *old_queue,
     return old_queue;
 }
 
-p_queue_t *run_process(p_queue_t *old_queue) {
+p_queue_t *run_process(p_queue_t *old_queue, sched_info_t sched_info) {
     p_queue_t *current = old_queue;
 
     if (old_queue == NULL) {
@@ -50,14 +51,33 @@ p_queue_t *run_process(p_queue_t *old_queue) {
         current = current->next;
     }
 
-    if (current->process->time_remaining > 0) {
-        current->process->time_remaining--;
-        current->process->time_used++;
-        current->process->state = RUNNING;
-        return old_queue;
+    if (sched_info.algorithm == FIFO) {
+        if (current->process->time_remaining > 0) {
+            current->process->time_remaining--;
+            current->process->time_used++;
+            current->process->state = RUNNING;
+            return old_queue;
+        } else {
+            /* current->process->state = TERMINATED; */
+            return kill_process(current->process->pid, old_queue);
+        }
     } else {
-        current->process->state = TERMINATED;
-        return old_queue;
+        if (current->process->time_remaining <= 0) {
+            /* current->process->state = TERMINATED; */
+            return kill_process(current->process->pid, old_queue);
+        } 
+
+        if (current->process->time_quantum < sched_info.time_quantum) {
+            current->process->time_quantum++;
+            current->process->time_remaining--;
+            current->process->time_used++;
+            current->process->state = RUNNING;
+            return old_queue;
+        } else {
+            current->process->time_quantum = 0;
+            current->process->state = READY;
+            return old_queue;
+        }
     }
 }
 
@@ -70,15 +90,17 @@ p_queue_t *kill_process(int32_t pid, p_queue_t *queue) {
 
     while (current->process->pid != pid) {
         current = current->next;
+        if (current == NULL) {
+            return queue;
+        }
     }
 
-    if (current->next == NULL || current->prev == NULL) {
-        free(current);
-        return NULL;
-    }
-
+    /*
     current->prev->next = current->next;
     current->next->prev = current->prev;
     free(current);
+    */
+    current->process->state = TERMINATED;
+    free_mem(current->process->mem_start, current->process->mem_size);
     return queue;
 }

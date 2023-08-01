@@ -1,4 +1,5 @@
 #include "interface.h"
+#include "mmu.h"
 #include "scheduler.h"
 #include <panel.h>
 
@@ -313,15 +314,17 @@ void print_bit_map_of_processes_memory(WINDOW *win, p_queue_t *p) {
     int i, j;
     int x, y;
     int32_t scalex, scaley;
+    bool *memory = get_memory_map();
+
     restart_map(win);
     getmaxyx(win, y, x);
     scalex = (x - 6) / 6;
     scaley = (y - 6) / 6;
     wmove(win, 1, 1);
-    for (i = 0; i < 6; i++) {
-        for (j = 0; j < 6; j++) {
+    for (i = 0; i < 4; i++) {
+        for (j = 0; j < 5; j++) {
             mvwprintw(win, 2 + ((i + 1) * scaley), ((j + 0.75) * scalex), "%d",
-                      0);
+                      memory[i * 4 + j]);
         }
     }
     refresh();

@@ -25,12 +25,17 @@
 /* enum process_state { NEW, READY, RUNNING, WAITING, TERMINATED }; */
 enum process_state { READY, RUNNING, BLOCKED, TERMINATED };
 
-enum scheduler_algorithm { FIFO, ROUND_ROBIN };
+enum scheduler_algorithm { FIFO, RR };
+
+typedef struct sched_info {
+    enum scheduler_algorithm algorithm;
+    int time_quantum;
+} sched_info_t;
 
 typedef struct process {
     uint8_t pid;
     int mem_size;
-    int mem_start;
+    int8_t mem_start;
     enum process_state state;
     int time_quantum;
     int time_remaining;
@@ -47,7 +52,7 @@ typedef struct p_queue {
 process_t *create_process(int mem_size, uint8_t pid);
 p_queue_t *add_process_to_queue(p_queue_t *old_queue,
                                 process_t *process_to_add);
-p_queue_t *run_process(p_queue_t *queue);
+p_queue_t *run_process(p_queue_t *old_queue, sched_info_t sched_info);
 p_queue_t *kill_process(int32_t pid, p_queue_t *queue);
 
 #endif
