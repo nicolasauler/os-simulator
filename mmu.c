@@ -13,11 +13,13 @@ int8_t first_fit_mem(int mem_size) {
     int8_t i, j;
     bool found = false;
 
+    /* checks if there is a contiguous block of memory of size mem_size
+     * the  block can overlap from MAXMEM back to the beggining */
     for (i = 0; i < MAXMEM; i++) {
         if (mem[i] == false) {
             found = true;
             for (j = i; j < i + mem_size; j++) {
-                if (mem[j] == true) {
+                if (mem[j % MAXMEM] == true) {
                     found = false;
                     break;
                 }
@@ -30,7 +32,7 @@ int8_t first_fit_mem(int mem_size) {
 
     if (found) {
         for (j = i; j < i + mem_size; j++) {
-            mem[j] = true;
+            mem[j % MAXMEM] = true;
         }
         return i;
     } else {

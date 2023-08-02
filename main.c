@@ -19,6 +19,13 @@ typedef struct {
     sched_info_t sched_info;
 } thread_args;
 
+/* char **commands is an array of chars that corresponds to user inputs
+ * int n_strings is the number of strings in the array
+ * the commands can be create -m <mem_size>, kill <pid> or just create
+ * which creates a process with 1 memory
+ * uses getopt to parse the command line arguments
+ * if <mem_size> is bigger than 20, make user input a smaller number
+ * */
 void process_command(WINDOW **wins, char **commands, int n_strings,
                      p_queue_t **p, uint8_t *process_count);
 char **tokenize_command(char *command, int *n_strings);
@@ -154,10 +161,14 @@ void process_command(WINDOW **wins, char **commands, int n_strings,
             mem_size = 1;
         }
 
-        p1 = create_process(mem_size, (*process_count));
-        (*process_count) += 1;
-        (*p) = add_process_to_queue((*p), p1);
-        wprintw(wins[3], "create process with %d memory\n", mem_size);
+        if (mem_size > MAXMEM) {
+            show_commands(wins[3]);
+        } else {
+            p1 = create_process(mem_size, (*process_count));
+            (*process_count) += 1;
+            (*p) = add_process_to_queue((*p), p1);
+            wprintw(wins[3], "create process with %d memory\n", mem_size);
+        }
     } else if (strcmp(commands[0], "kill") == 0) {
         if (n_strings != 2) {
             show_commands(wins[3]);
