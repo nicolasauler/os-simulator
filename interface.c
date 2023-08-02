@@ -332,7 +332,7 @@ void print_bit_map_of_processes_memory(WINDOW *win) {
     for (i = 0; i < 4; i++) {
         for (j = 0; j < 5; j++) {
             mvwprintw(win, 2 + ((i + 1) * scaley), ((j + 0.75) * scalex), "%d",
-                      memory[i * 4 + j]);
+                      memory[i * 5 + j]);
         }
     }
     refresh();
