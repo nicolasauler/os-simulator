@@ -23,7 +23,7 @@
         */
 
 /* enum process_state { NEW, READY, RUNNING, WAITING, TERMINATED }; */
-enum process_state { READY, RUNNING, BLOCKED, TERMINATED };
+enum process_state { NEW, READY, RUNNING };
 
 enum scheduler_algorithm { FIFO, RR };
 

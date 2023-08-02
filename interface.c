@@ -211,56 +211,38 @@ void reset_panels(PANEL **panels) {
 }
 
 void update_interface(WINDOW **wins, PANEL **panels, p_queue_t *p) {
-    char pid_text[MAXSTR];
-    p_queue_t *current = p;
-    int n_actives = 1;
-    int helper = 0;
-
-    /*
-    if (p == NULL) {
-        return;
-    }
-    */
-
-    restart_queue(wins[0]);
-    wmove(wins[0], 1, 1);
-
-    while (current != NULL) {
-        if (current->process->state == READY ||
-            current->process->state == RUNNING) {
-            n_actives += 1;
-        }
-        current = current->next;
-    }
-
-    current = p;
-    while (current != NULL) {
-        if (current->process->state == READY ||
-            current->process->state == RUNNING) {
-            sprintf(pid_text, "PID: %d\n", current->process->pid);
-            /* invert the colors before printing */
-            if (helper == 0) {
-                wattron(wins[0], COLOR_PAIR(5));
-            }
-            mvwprintw(wins[0], 3, helper * 10 + 1, "%s", pid_text);
-            if (helper == 0) {
-                wattroff(wins[0], COLOR_PAIR(5));
-            }
-            refresh();
-
-            if (helper < n_actives) {
-                helper += 1;
-            }
-        }
-        current = current->next;
-    }
-
+    print_process_queue(wins[0], p);
     print_bit_map_of_processes_memory(wins[2]);
     read_instructions_file(wins[1], p);
 
     reset_panels(panels);
     update_panels();
     doupdate();
+}
+
+void print_process_queue(WINDOW *win, p_queue_t *p) {
+    char pid_text[MAXSTR];
+    p_queue_t *current = p;
+    int helper = 0;
+
+    restart_queue(win);
+    wmove(win, 1, 1);
+
+    if (current != NULL) {
+        sprintf(pid_text, "PID: %d\n", current->process->pid);
+        wattron(win, COLOR_PAIR(5));
+        mvwprintw(win, 3, helper * 10 + 1, "%s", pid_text);
+        wattroff(win, COLOR_PAIR(5));
+        refresh();
+        current = current->next;
+    }
+    while (current != NULL) {
+        helper += 1;
+        sprintf(pid_text, "PID: %d\n", current->process->pid);
+        mvwprintw(win, 3, helper * 10 + 1, "%s", pid_text);
+        refresh();
+        current = current->next;
+    }
 }
 
 void read_instructions_file(WINDOW *win, p_queue_t *p) {
@@ -354,4 +336,5 @@ void print_bit_map_of_processes_memory(WINDOW *win) {
         }
     }
     refresh();
+    free(memory);
 }

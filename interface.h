@@ -36,6 +36,7 @@ void restart_status(WINDOW *win);
 void restart_queue(WINDOW *win);
 void restart_map(WINDOW *win);
 
+void print_process_queue(WINDOW *win, p_queue_t *p);
 void print_bit_map_of_processes_memory(WINDOW *win);
 void read_instructions_file(WINDOW *win, p_queue_t *p);
 

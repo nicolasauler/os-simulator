@@ -24,13 +24,24 @@ process_t *create_process(int mem_size, uint8_t pid) {
     process_t *new_process = malloc(sizeof(process_t));
     new_process->pid = pid;
     new_process->mem_size = mem_size;
-    new_process->mem_start = first_fit_mem(mem_size);
-    new_process->state = READY;
+    new_process->mem_start = -1;
+    new_process->state = NEW;
     new_process->time_quantum = 0;
     new_process->time_remaining = 10;
     new_process->time_used = 0;
     new_process->time_waiting = 0;
     return new_process;
+}
+
+bool can_allocate_mem(process_t **process) {
+    int8_t mem_start = first_fit_mem((*process)->mem_size);
+
+    if (mem_start == -1) {
+        return false;
+    }
+
+    (*process)->mem_start = mem_start;
+    return true;
 }
 
 p_queue_t *add_process_to_queue(p_queue_t *old_queue,
@@ -62,12 +73,13 @@ p_queue_t *run_process(p_queue_t *old_queue, sched_info_t sched_info) {
         return NULL;
     }
 
-    while (current->process->state != READY &&
-           current->process->state != RUNNING) {
-        if (current->next == NULL) {
-            return old_queue;
+    if (current->process->mem_start == -1) {
+        if (can_allocate_mem(&(current->process))) {
+            current->process->state = READY;
+        } else {
+            current->process->time_waiting++;
+            return move_to_end_of_queue(old_queue);
         }
-        current = current->next;
     }
 
     if (sched_info.algorithm == FIFO) {
