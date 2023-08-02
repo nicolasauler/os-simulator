@@ -1,6 +1,25 @@
 #include "scheduler.h"
 #include "mmu.h"
 
+p_queue_t *move_to_end_of_queue(p_queue_t *old_queue) {
+    p_queue_t *current = old_queue;
+
+    if (old_queue == NULL) {
+        return NULL;
+    }
+
+    while (current->next != NULL) {
+        current = current->next;
+    }
+
+    current->next = old_queue;
+    old_queue->prev = current;
+    old_queue = old_queue->next;
+    old_queue->prev = NULL;
+    current->next->next = NULL;
+    return old_queue;
+}
+
 process_t *create_process(int mem_size, uint8_t pid) {
     process_t *new_process = malloc(sizeof(process_t));
     new_process->pid = pid;
@@ -56,29 +75,58 @@ p_queue_t *run_process(p_queue_t *old_queue, sched_info_t sched_info) {
             current->process->time_remaining--;
             current->process->time_used++;
             current->process->state = RUNNING;
-            return old_queue;
-        } else {
-            /* current->process->state = TERMINATED; */
-            return kill_process(current->process->pid, old_queue);
         }
-    } else {
-        if (current->process->time_remaining <= 0) {
-            /* current->process->state = TERMINATED; */
-            return kill_process(current->process->pid, old_queue);
-        } 
 
-        if (current->process->time_quantum < sched_info.time_quantum) {
-            current->process->time_quantum++;
-            current->process->time_remaining--;
-            current->process->time_used++;
-            current->process->state = RUNNING;
-            return old_queue;
-        } else {
-            current->process->time_quantum = 0;
-            current->process->state = READY;
+        if (current->process->time_remaining > 0) {
             return old_queue;
         }
+
+        return kill_process(current->process->pid, old_queue);
+    } else {
+        if (current->process->time_remaining > 0) {
+            if (current->process->time_quantum < sched_info.time_quantum) {
+                current->process->time_quantum++;
+                current->process->time_remaining--;
+                current->process->time_used++;
+                current->process->state = RUNNING;
+                return old_queue;
+            }
+        }
+
+        if (current->process->time_remaining > 0) {
+            if (current->process->time_quantum >= sched_info.time_quantum) {
+                current->process->time_quantum = 0;
+                current->process->state = READY;
+                return move_to_end_of_queue(old_queue);
+            }
+        }
+
+        return kill_process(current->process->pid, old_queue);
     }
+}
+
+p_queue_t *remove_process_from_queue(p_queue_t *queue, p_queue_t *process) {
+    p_queue_t *current = queue;
+
+    if (process->prev == NULL) {
+        queue = process->next;
+        if (queue != NULL) {
+            queue->prev = NULL;
+        }
+        free(process);
+        return queue;
+    }
+
+    while (current->next != process) {
+        current = current->next;
+    }
+
+    current->next = process->next;
+    if (process->next != NULL) {
+        process->next->prev = current;
+    }
+    free(process);
+    return queue;
 }
 
 p_queue_t *kill_process(int32_t pid, p_queue_t *queue) {
@@ -95,12 +143,10 @@ p_queue_t *kill_process(int32_t pid, p_queue_t *queue) {
         }
     }
 
-    /*
-    current->prev->next = current->next;
-    current->next->prev = current->prev;
-    free(current);
-    */
-    current->process->state = TERMINATED;
     free_mem(current->process->mem_start, current->process->mem_size);
+    queue = remove_process_from_queue(queue, current);
+    /*
+    current->process->state = TERMINATED;
+    */
     return queue;
 }

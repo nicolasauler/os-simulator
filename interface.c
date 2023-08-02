@@ -1,28 +1,32 @@
 #include "interface.h"
 #include "mmu.h"
 #include "scheduler.h"
+#include <curses.h>
 #include <panel.h>
 
 extern struct _PANEL_DATA panel_data;
 
-void init_wins(WINDOW **wins, int n) {
-    int i;
+void init_wins(WINDOW **wins) {
     char label[80];
+    int32_t max_x, max_y;
 
-    wins[0] = newwin(5, COLS, 0, 0);
+    getmaxyx(stdscr, max_y, max_x);
+
+    wins[0] = newwin(5, max_x, 0, 0);
     sprintf(label, "Queue");
     win_show(wins[0], label, 1);
-    wins[1] = newwin(LINES - 8, COLS / 2, 5, 0);
+
+    wins[1] = newwin(max_y - 8, max_x / 2, 5, 0);
     sprintf(label, "Status");
     win_show(wins[1], label, 2);
-    wins[2] = newwin(LINES - 8, COLS / 2, 5, 79);
+
+    wins[2] = newwin(max_y - 8, max_x / 2, 5, max_x / 2);
     sprintf(label, "Bit Map");
     win_show(wins[2], label, 3);
-    for (i = 3; i < n; ++i) {
-        wins[i] = newwin(LINES - 10, COLS - 10, 6, 5);
-        sprintf(label, "Console");
-        win_show(wins[i], label, i + 1);
-    }
+
+    wins[3] = newwin(max_y / 2, max_x / 2, (max_y / 2) + 1, max_x / 4);
+    sprintf(label, "Console");
+    win_show(wins[3], label, 4);
 }
 
 /* show the window with a border and a label */
@@ -114,9 +118,10 @@ void init_interface(WINDOW **my_wins, PANEL **my_panels,
     init_pair(3, COLOR_BLUE, COLOR_BLACK);
     init_pair(4, COLOR_CYAN, COLOR_BLACK);
     init_pair(5, COLOR_BLACK, COLOR_WHITE);
+    init_pair(6, COLOR_YELLOW, COLOR_BLACK);
 
     /* initialize windows */
-    init_wins(my_wins, 4);
+    init_wins(my_wins);
 
     /* attach a panel to each window */
     my_panels[0] = new_panel(my_wins[0]); /* push 0, order: stdscr-0 */
@@ -140,9 +145,22 @@ void init_interface(WINDOW **my_wins, PANEL **my_panels,
 
 void show_keyboard_shortcuts() {
     attron(COLOR_PAIR(4));
-    mvprintw(LINES - 2, 0, "Show or Hide a window with 'Tab'(Console)");
+    mvprintw(LINES - 2, 0, "Show or Hide Console with 'Tab'");
     mvprintw(LINES - 1, 0, "F1 to Exit");
     attroff(COLOR_PAIR(4));
+    doupdate();
+}
+
+void show_title(sched_info_t sched_info) {
+    attron(COLOR_PAIR(6));
+    mvprintw(LINES - 2, COLS - 28, "Process Management Simulator");
+    if (sched_info.algorithm == FIFO) {
+        mvprintw(LINES - 1, COLS - 10, "Using FIFO");
+    } else {
+        mvprintw(LINES - 1, COLS - 24, "Using RR with Quantum %d",
+                 sched_info.time_quantum);
+    }
+    attroff(COLOR_PAIR(6));
     doupdate();
 }
 
@@ -198,14 +216,16 @@ void update_interface(WINDOW **wins, PANEL **panels, p_queue_t *p) {
     int n_actives = 1;
     int helper = 0;
 
+    /*
     if (p == NULL) {
         return;
     }
+    */
 
     restart_queue(wins[0]);
     wmove(wins[0], 1, 1);
 
-    while (current->next != NULL) {
+    while (current != NULL) {
         if (current->process->state == READY ||
             current->process->state == RUNNING) {
             n_actives += 1;
@@ -214,7 +234,7 @@ void update_interface(WINDOW **wins, PANEL **panels, p_queue_t *p) {
     }
 
     current = p;
-    do {
+    while (current != NULL) {
         if (current->process->state == READY ||
             current->process->state == RUNNING) {
             sprintf(pid_text, "PID: %d\n", current->process->pid);
@@ -233,9 +253,9 @@ void update_interface(WINDOW **wins, PANEL **panels, p_queue_t *p) {
             }
         }
         current = current->next;
-    } while (current != NULL);
+    }
 
-    print_bit_map_of_processes_memory(wins[2], p);
+    print_bit_map_of_processes_memory(wins[2]);
     read_instructions_file(wins[1], p);
 
     reset_panels(panels);
@@ -269,12 +289,18 @@ void read_instructions_file(WINDOW *win, p_queue_t *p) {
             } while (current != NULL);
         }
 
-        for (j = 0; j < i; j++) {
-            instructions[j][strcspn(instructions[j], "\r\n")] = 0;
-            if (j == k) {
-                mvwprintw(win, j + 3, 3, "%s   <----\n", instructions[j]);
-            } else {
-                mvwprintw(win, j + 3, 3, "%s\n", instructions[j]);
+        if (p != NULL) {
+            current = p;
+            if (current->process->state == RUNNING) {
+                for (j = 0; j < i; j++) {
+                    instructions[j][strcspn(instructions[j], "\r\n")] = 0;
+                    if (j == k) {
+                        mvwprintw(win, j + 3, 3, "%s   <----\n",
+                                  instructions[j]);
+                    } else {
+                        mvwprintw(win, j + 3, 3, "%s\n", instructions[j]);
+                    }
+                }
             }
         }
         fclose(fp);
@@ -310,7 +336,7 @@ void restart_map(WINDOW *win) {
     doupdate();
 }
 
-void print_bit_map_of_processes_memory(WINDOW *win, p_queue_t *p) {
+void print_bit_map_of_processes_memory(WINDOW *win) {
     int i, j;
     int x, y;
     int32_t scalex, scaley;

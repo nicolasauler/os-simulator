@@ -8,8 +8,6 @@
 #include <panel.h>
 #include <string.h>
 
-#define LINES 37
-#define COLS 157
 #define MAXSTR 20
 #define MAXINSTS 20
 
@@ -19,7 +17,7 @@ typedef struct _PANEL_DATA {
 
 extern struct process processo;
 
-void init_wins(WINDOW **wins, int n);
+void init_wins(WINDOW **wins);
 void win_show(WINDOW *win, char *label, int label_color);
 void print_in_middle(WINDOW *win, int starty, int startx, uint64_t width,
                      char *string, chtype color);
@@ -38,7 +36,9 @@ void restart_status(WINDOW *win);
 void restart_queue(WINDOW *win);
 void restart_map(WINDOW *win);
 
-void print_bit_map_of_processes_memory(WINDOW *win, p_queue_t *p);
+void print_bit_map_of_processes_memory(WINDOW *win);
 void read_instructions_file(WINDOW *win, p_queue_t *p);
+
+void show_title(sched_info_t sched_info);
 
 #endif

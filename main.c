@@ -36,14 +36,13 @@ int main(int argc, char **argv) {
     thread_args *args = malloc(sizeof(thread_args));
     int i = 0;
     uint8_t process_count = 0;
-    sched_info_t sched_info;
+    sched_info_t sched_info = parse_args(argc, argv);
 
     init_mem();
     init_interface(my_wins, my_panels, panel_datas);
     show_keyboard_shortcuts();
+    show_title(sched_info);
     log_init();
-
-    sched_info = parse_args(argc, argv);
 
     args->wins = my_wins;
     args->panels = my_panels;
