@@ -33,9 +33,9 @@ void *kernel(void *args);
 sched_info_t parse_args(int argc, char **argv);
 
 int main(int argc, char **argv) {
-    WINDOW *my_wins[4];
-    PANEL *my_panels[4];
-    PANEL_DATA panel_datas[4];
+    WINDOW *my_wins[5];
+    PANEL *my_panels[5];
+    PANEL_DATA panel_datas[5];
     PANEL_DATA *temp;
     int ch;
     char command[MAXSTR];
@@ -122,8 +122,8 @@ void *kernel(void *args) {
         }
 
         p_queue = run_process(p_queue, sched_info);
-        sleep(1);
         update_interface(my_wins, my_panels, p_queue);
+        sleep(1);
     }
 }
 

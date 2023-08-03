@@ -32,6 +32,7 @@ void add_char_to_console(WINDOW *win, int ch);
 
 void update_interface(WINDOW **wins, PANEL **panels, p_queue_t *p);
 
+void restart_tcb(WINDOW *win);
 void restart_status(WINDOW *win);
 void restart_queue(WINDOW *win);
 void restart_map(WINDOW *win);

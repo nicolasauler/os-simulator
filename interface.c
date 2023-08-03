@@ -16,17 +16,25 @@ void init_wins(WINDOW **wins) {
     sprintf(label, "Queue");
     win_show(wins[0], label, 1);
 
-    wins[1] = newwin(max_y - 8, max_x / 2, 5, 0);
+    wins[1] = newwin(max_y - 8, max_x / 3, 5, 0);
     sprintf(label, "Status");
     win_show(wins[1], label, 2);
 
-    wins[2] = newwin(max_y - 8, max_x / 2, 5, max_x / 2);
+    wins[4] = newwin(max_y - 8, max_x / 3, 5, max_x / 3);
+    sprintf(label, "TCB");
+    win_show(wins[4], label, 2);
+
+    wins[2] = newwin(max_y - 8, max_x / 3, 5, max_x - (max_x / 3));
     sprintf(label, "Bit Map");
-    win_show(wins[2], label, 3);
+    win_show(wins[2], label, 2);
 
     wins[3] = newwin(max_y / 2, max_x / 2, (max_y / 2) + 1, max_x / 4);
     sprintf(label, "Console");
-    win_show(wins[3], label, 4);
+    scrollok(wins[3], TRUE);
+    idlok(wins[3], TRUE);
+    max_y = getmaxy(wins[3]);
+    wsetscrreg(wins[3], 3, max_y - 1);
+    win_show(wins[3], label, 3);
 }
 
 /* show the window with a border and a label */
@@ -86,6 +94,7 @@ void print_in_middle(WINDOW *win, int starty, int startx, uint64_t width,
     wattron(win, color);
     mvwprintw(win, y, x, "%s", string);
     wattroff(win, color);
+    wmove(win, y + 1, x);
     refresh();
 }
 
@@ -124,20 +133,23 @@ void init_interface(WINDOW **my_wins, PANEL **my_panels,
     init_wins(my_wins);
 
     /* attach a panel to each window */
-    my_panels[0] = new_panel(my_wins[0]); /* push 0, order: stdscr-0 */
-    my_panels[1] = new_panel(my_wins[1]); /* push 1, order: stdscr-0-1 */
-    my_panels[2] = new_panel(my_wins[2]); /* push 2, order: stdscr-0-1-2 */
-    my_panels[3] = new_panel(my_wins[3]); /* push 3, order: stdscr-0-1-2-3 */
+    my_panels[0] = new_panel(my_wins[0]);
+    my_panels[1] = new_panel(my_wins[1]);
+    my_panels[2] = new_panel(my_wins[2]);
+    my_panels[4] = new_panel(my_wins[4]);
+    my_panels[3] = new_panel(my_wins[3]);
 
     /* Initialize panel datas saying that nothing is hidden */
     panel_datas[0].hide = FALSE;
     panel_datas[1].hide = FALSE;
     panel_datas[2].hide = FALSE;
+    panel_datas[4].hide = FALSE;
     panel_datas[3].hide = FALSE;
 
     set_panel_userptr(my_panels[0], &panel_datas[0]);
     set_panel_userptr(my_panels[1], &panel_datas[1]);
     set_panel_userptr(my_panels[2], &panel_datas[2]);
+    set_panel_userptr(my_panels[4], &panel_datas[4]);
     set_panel_userptr(my_panels[3], &panel_datas[3]);
 
     update_panels();
@@ -168,7 +180,7 @@ void print_prompt_char(WINDOW *console_win) {
     int x, y;
     getyx(console_win, y, x);
     x = 2;
-    y += 2;
+    y += 1;
     wattron(console_win, COLOR_PAIR(4));
     mvwprintw(console_win, y, x, "$");
     wattroff(console_win, COLOR_PAIR(4));
@@ -210,10 +222,26 @@ void reset_panels(PANEL **panels) {
     }
 }
 
+void print_tcb_of_current_process(WINDOW *win, p_queue_t *p) {
+    p_queue_t *current = p;
+
+    restart_tcb(win);
+
+    if (current != NULL) {
+        mvwprintw(win, 3, 1, "PID: %d\n", current->process->pid);
+        mvwprintw(win, 4, 1, "PC: %d\n", 0);
+        mvwprintw(win, 5, 1, "SP: %d\n", 0);
+        mvwprintw(win, 6, 1, "Priority: %d\n", 0);
+        mvwprintw(win, 7, 1, "State: %u\n", current->process->state);
+    }
+    wrefresh(win);
+}
+
 void update_interface(WINDOW **wins, PANEL **panels, p_queue_t *p) {
     print_process_queue(wins[0], p);
     print_bit_map_of_processes_memory(wins[2]);
     read_instructions_file(wins[1], p);
+    print_tcb_of_current_process(wins[4], p);
 
     reset_panels(panels);
     update_panels();
@@ -255,40 +283,72 @@ void read_instructions_file(WINDOW *win, p_queue_t *p) {
 
     restart_status(win);
 
-    fp = fopen("instructions.asm", "r");
-    if (fp != NULL) {
-        while (fgets(instructions[i], MAXSTR, fp) != NULL) {
-            i += 1;
-        }
-
-        if (p != NULL) {
-            do {
-                if (current->process->state == RUNNING) {
-                    k = current->process->time_used;
-                    break;
-                }
-                current = current->next;
-            } while (current != NULL);
-        }
-
-        if (p != NULL) {
-            current = p;
-            if (current->process->state == RUNNING) {
-                for (j = 0; j < i; j++) {
-                    instructions[j][strcspn(instructions[j], "\r\n")] = 0;
-                    if (j == k) {
-                        mvwprintw(win, j + 3, 3, "%s   <----\n",
-                                  instructions[j]);
-                    } else {
-                        mvwprintw(win, j + 3, 3, "%s\n", instructions[j]);
-                    }
-                }
-            }
-        }
-        fclose(fp);
+    if (p == NULL) {
+        logger("No process in queue");
+        return;
     }
 
+    switch (current->process->pid % 5) {
+    case 0:
+        fp = fopen("insts/insts0.asm", "r");
+        break;
+    case 1:
+        fp = fopen("insts/insts1.asm", "r");
+        break;
+    case 2:
+        fp = fopen("insts/insts2.asm", "r");
+        break;
+    case 3:
+        fp = fopen("insts/insts3.asm", "r");
+        break;
+    case 4:
+        fp = fopen("insts/insts4.asm", "r");
+        break;
+    default:
+        logger("Error opening file");
+        exit(1);
+    }
+
+    if (fp == NULL) {
+        logger("Error opening file");
+        exit(1);
+    }
+
+    while (fgets(instructions[i], MAXSTR, fp) != NULL) {
+        i += 1;
+    }
+
+    do {
+        if (current->process->state == RUNNING) {
+            k = current->process->time_used;
+            break;
+        }
+        current = current->next;
+    } while (current != NULL);
+
+    current = p;
+    if (current->process->state == RUNNING) {
+        for (j = 0; j < i; j++) {
+            instructions[j][strcspn(instructions[j], "\r\n")] = 0;
+            if (j == k) {
+                mvwprintw(win, j + 3, 3, "%s\t\t<----\n", instructions[j]);
+            } else {
+                mvwprintw(win, j + 3, 3, "%s\n", instructions[j]);
+            }
+        }
+    }
+
+    fclose(fp);
     wrefresh(win);
+}
+
+void restart_tcb(WINDOW *win) {
+    char label[MAXSTR];
+    werase(win);
+    sprintf(label, "TCB");
+    win_show(win, label, 2);
+    wrefresh(win);
+    doupdate();
 }
 
 void restart_status(WINDOW *win) {
@@ -313,7 +373,7 @@ void restart_map(WINDOW *win) {
     char label[MAXSTR];
     werase(win);
     sprintf(label, "Bit Map");
-    win_show(win, label, 3);
+    win_show(win, label, 2);
     wrefresh(win);
     doupdate();
 }

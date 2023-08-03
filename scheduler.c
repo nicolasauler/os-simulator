@@ -66,6 +66,17 @@ p_queue_t *add_process_to_queue(p_queue_t *old_queue,
     return old_queue;
 }
 
+p_queue_t *toggle_next_process_state(p_queue_t *queue) {
+    p_queue_t *current = queue;
+
+    if (queue == NULL) {
+        return NULL;
+    }
+
+    current->process->state = RUNNING;
+    return queue;
+}
+
 p_queue_t *run_process(p_queue_t *old_queue, sched_info_t sched_info) {
     p_queue_t *current = old_queue;
 
@@ -95,22 +106,22 @@ p_queue_t *run_process(p_queue_t *old_queue, sched_info_t sched_info) {
 
         return kill_process(current->process->pid, old_queue);
     } else {
-        if (current->process->time_remaining > 0) {
-            if (current->process->time_quantum < sched_info.time_quantum) {
-                current->process->time_quantum++;
-                current->process->time_remaining--;
-                current->process->time_used++;
-                current->process->state = RUNNING;
-                return old_queue;
-            }
+        if (current->process->time_quantum < sched_info.time_quantum) {
+            current->process->time_quantum++;
+            current->process->time_remaining--;
+            current->process->time_used++;
+            current->process->state = RUNNING;
         }
 
         if (current->process->time_remaining > 0) {
             if (current->process->time_quantum >= sched_info.time_quantum) {
                 current->process->time_quantum = 0;
                 current->process->state = READY;
-                return move_to_end_of_queue(old_queue);
+                old_queue = move_to_end_of_queue(old_queue);
+                old_queue = toggle_next_process_state(old_queue);
             }
+
+            return old_queue;
         }
 
         return kill_process(current->process->pid, old_queue);
