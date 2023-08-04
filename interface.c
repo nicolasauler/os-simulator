@@ -30,11 +30,12 @@ void init_wins(WINDOW **wins) {
 
     wins[3] = newwin(max_y / 2, max_x / 2, (max_y / 2) + 1, max_x / 4);
     sprintf(label, "Console");
+    win_show(wins[3], label, 3);
+
     scrollok(wins[3], TRUE);
     idlok(wins[3], TRUE);
     max_y = getmaxy(wins[3]);
     wsetscrreg(wins[3], 3, max_y - 1);
-    win_show(wins[3], label, 3);
 }
 
 /* show the window with a border and a label */
@@ -257,17 +258,19 @@ void print_process_queue(WINDOW *win, p_queue_t *p) {
     wmove(win, 1, 1);
 
     if (current != NULL) {
-        sprintf(pid_text, "PID: %d\n", current->process->pid);
+        sprintf(pid_text, " %d ", current->process->pid);
         wattron(win, COLOR_PAIR(5));
         mvwprintw(win, 3, helper * 10 + 1, "%s", pid_text);
+        /* mvwaddnstr(win, 3, helper * 10 + 1, pid_text, 10); */
         wattroff(win, COLOR_PAIR(5));
         refresh();
         current = current->next;
     }
     while (current != NULL) {
         helper += 1;
-        sprintf(pid_text, "PID: %d\n", current->process->pid);
+        sprintf(pid_text, " %d ", current->process->pid);
         mvwprintw(win, 3, helper * 10 + 1, "%s", pid_text);
+        /* mvwaddnstr(win, 3, helper * 10 + 1, pid_text, 10); */
         refresh();
         current = current->next;
     }
@@ -276,6 +279,7 @@ void print_process_queue(WINDOW *win, p_queue_t *p) {
 void read_instructions_file(WINDOW *win, p_queue_t *p) {
     FILE *fp;
     char instructions[MAXINSTS][MAXSTR];
+    char instruction[28];
     int i = 0;
     int j = 0;
     int k = 0;
@@ -331,9 +335,13 @@ void read_instructions_file(WINDOW *win, p_queue_t *p) {
         for (j = 0; j < i; j++) {
             instructions[j][strcspn(instructions[j], "\r\n")] = 0;
             if (j == k) {
-                mvwprintw(win, j + 3, 3, "%s\t\t<----\n", instructions[j]);
+                /* mvwprintw(win, j + 3, 3, "%s\t\t<----\n", instructions[j]);
+                 */
+                sprintf(instruction, "%s\t\t<----", instructions[j]);
+                mvwaddnstr(win, j + 3, 3, instruction, 28);
             } else {
-                mvwprintw(win, j + 3, 3, "%s\n", instructions[j]);
+                mvwaddnstr(win, j + 3, 3, instructions[j], 28);
+                /* mvwprintw(win, j + 3, 3, "%s\n", instructions[j]); */
             }
         }
     }
