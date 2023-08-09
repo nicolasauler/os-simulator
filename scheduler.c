@@ -27,9 +27,30 @@ process_t *create_process(int mem_size, uint8_t pid) {
     new_process->mem_start = -1;
     new_process->state = NEW;
     new_process->time_quantum = 0;
-    new_process->time_remaining = 10;
     new_process->time_used = 0;
     new_process->time_waiting = 0;
+    new_process->file_d = pid % 5;
+
+    switch (pid % 5) {
+    case 0:
+        new_process->time_remaining = 10;
+        break;
+    case 1:
+        new_process->time_remaining = 4;
+        break;
+    case 2:
+        new_process->time_remaining = 30;
+        break;
+    case 3:
+        new_process->time_remaining = 20;
+        break;
+    case 4:
+        new_process->time_remaining = 8;
+        break;
+    default:
+        exit(1);
+    }
+
     return new_process;
 }
 

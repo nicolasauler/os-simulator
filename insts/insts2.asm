@@ -1,10 +1,30 @@
-lorem
-ipsum
-dolor
-sit
-amet
-consectetur
-adipiscing
-elit
-sed
-do
+ADD R0, R1, R2
+SUB R3, R4, #5
+MUL R5, R6, R7
+AND R8, R9, #0xFF
+ORR R0, R0, R1
+EOR R2, R3, R4
+BIC R5, R5, #0x0F
+MOV R6, #42
+LDR R7, [R8]
+STR R9, [R10]
+B 0x1000
+BL my_function
+BX LR
+BEQ loop
+MRS R0, CPSR
+MSR CPSR_c, R1
+PUSH {R4, LR}
+POP {R4, LR}
+CMP R2, R3
+TST R4, #1
+BNE 0x2000
+LDR R0, [R1, #4]
+STR R2, [R3, #-8]
+MUL R4, R5, R6, ASL #2
+ADD R7, R7, R8, LSR #3
+BGT 0x3000
+ORR R1, R2, R3, ROR #5
+MVN R0, #0
+BICS R5, R6
+RSB R3, R4, #0

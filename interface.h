@@ -8,8 +8,8 @@
 #include <panel.h>
 #include <string.h>
 
-#define MAXSTR 20
-#define MAXINSTS 20
+#define MAXSTR 30
+#define MAXINSTS 50
 
 typedef struct _PANEL_DATA {
     int hide; /* TRUE if panel is hidden */

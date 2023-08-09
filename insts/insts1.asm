@@ -1,10 +1,4 @@
-nicolas
-caio
-fernanda
-joao
-breno
-sander
-johan
-ricardo
-miau
-edoo
+SMLAL R0, R1, R2, R3
+LDMIA SP!, {R4-R7}
+STMFD SP!, {R0-R3, LR}
+ADC R4, R5, R6

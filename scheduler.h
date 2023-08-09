@@ -41,6 +41,7 @@ typedef struct process {
     int time_remaining;
     int time_used;
     int time_waiting;
+    uint8_t file_d;
 } process_t;
 
 typedef struct p_queue {
