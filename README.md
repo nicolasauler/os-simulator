@@ -1,6 +1,6 @@
 # Oh!C
 
-**Oh\!**perating 
+__Oh!__ perating 
 
 **C**ystems
 
