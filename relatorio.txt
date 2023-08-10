@@ -1,0 +1,83 @@
+O Programa: Simulador de Sistema Operacional, com Gerenciamento de Memória
+
+Objetivo: um usuário entenda, didaticamente, como um sistema operacional
+chaveia entre processos (em caso de RR) e como o scheduler seleciona
+qual processo para rodar.
+
+Utilização:
+    1. Inicie a simulação rodando:
+        "./main"            -> Para iniciar seu simulador em modo FIFO.
+        "./main -q <quant>"   -> Para iniciar seu simulador em modo Round Robin com
+                                quantum = quant.
+
+    2. Crie um processo:
+        "create -m <size>   -> Cria um processo com size unidades de memória.
+        "create"            -> Atalho: cria um processo com 1 unidade de memória.
+
+    3. Mate um processo:
+        "kill <pid>"        -> Mata o processo cuja pid foi inputada.
+
+
+Decisões de projeto:
+    Decidiu-se por fazer um projeto que considerássemos distribuível, ou seja,
+    que, posteriormente, pudéssemos adicionar a um Arch User Repository da vida,
+    e, assim, fosse uma contribuição didática para a comunidade open-source.
+
+    Assim, essa decisão de parâmetro motivou diversas escolhas, como:
+        1. Utilizaríamos um programa que tivesse uma experiência de usuário mínima, isto é,
+            abolimos a ideia de o usuário ter que executar dois comandos em shell para abrir
+            prompts diferentes, sendo que com o mínimo de Ncurses, poderia-se fazer uma
+            interface TUI válida.
+            Além disso, optamos por uma interface responsiva ao tamanho do terminal
+            em que é chamada a nível de inicialização.
+
+        2. A responsividade do programa deveria ser imediata. Então, o usuário já possui
+            uma interface, e, agora, cada comando que ele dá imediatamente impacta na
+            execução. Isso fez com que optássemos por usar sleep() ao invés de getchar(),
+            por exemplo, para o avanço de tempo. Fizemos essa escolha, pois assim se
+            assemelharia mais a um SO real e menos a um debugger.
+
+        3. Também visando a experiência do usuário, não implementamos um arquivo
+            configuração, nem configuração por variável de ambiente, e, sim, configuração
+            via argumento passado ao comando de inicialiazação do simulador.
+
+    Para atender a algumas demandas do enunciado, de-escalamos algumas implementações
+    como ter o prompt de comandos dentro do simulador no mesmo painel das outras
+    janelas. Por isso, fizemos a implementação de um painel suspenso que pode ser
+    escondido. Isso não só ajuda quando o "real-estate" de tela para o programa é
+    pequeno, mas, mantém maior proximidade à ideia de ter 2 prompts.
+
+
+    Fragmentação Externa de memória:
+        Quando há fragmentação externa, optou-se por finalizar os processos
+        responsáveis pela ocupação da memória. O processo decisório que levou
+        a essa conclusão foi o de que, como a memória possui apenas 20 bits,
+        como determinado pelo enunciado, o mínimo impacto de um processo na
+        memória é de 5% de ocupação, isto é, ocupa 1/20. Assim, poderia ocorrer
+        muita compactação.
+
+        Enfim, ao invés de implementarmos compactação, decidimos por uma política
+        de maior simplicidade, dada a pequena escala do sistema operacional
+        simulado (se assemelha mais a um embarcado).
+
+        Essa política foi a de fazermos a memória com "wrap-around", ou seja,
+        ainda é memória contígua, mas, um processo de tamanho 2u's pode ser alocado
+        na vigésima e na primeira posições do bitmap. E, caso ocorra de não
+        haver espaço para um novo processo devido à fragmentação, o escalonador
+        continua seu trabalho normal até que seja liberado espaço em memória para
+        um novo processo.
+
+
+Conclusões: 
+    Como ideias futuras, planeja-se extender a funcionalidade para tamanhos
+    de memória variados, bem como para outros algoritmos de escalonamento e de lidar
+    com fragmentação, como talvez uma compactação, ou, um algoritmo que selecione
+    de acordo com o tamanho da memória.
+
+    Além disso, o grupo está em acordo no sentido de julgar que o resultado
+    final foi positivo e compõe um produto educativo e didático. Mas, não só isso,
+    ainda imaginou-se fazer um outro projeto, que talvez acrescente-se a esse para,
+    dada uma demanda imaginária de processos inputada pelo usuário, se descubra
+    os algoritmos ideais para seu funcionamento, como o escalonamento que realize
+    as tarefas em menor tempo, algo que poderia ajudar para se planejar a arquitetura
+    de um sistema ou qual seria o comportamento das tasks num sistema real.
