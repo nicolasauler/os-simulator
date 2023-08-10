@@ -1,6 +1,6 @@
 # Oh!C
 
-**Oh!**perating 
+**Oh\!**perating 
 
 **C**ystems
 
@@ -12,11 +12,23 @@ Oh!C is an operating systems simulator that allows a user to:
 - Select size of memory to load in bit map
 
 # Usage
-## For Round Robin mode
+## Initiating program
+- For Round Robin mode
 `./main -q <quantum_size>`
 
-## For FIFO mode
+- For FIFO mode
 `./main`
+
+## Inside program
+- For help menu input anything except create or kill
+
+- To create a process
+`create -m <mem_size>`
+
+- To kill a process
+`kill <pid>`
+
+- To kill program press F1
 
 ## Example of running program
 
