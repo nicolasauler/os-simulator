@@ -1,10 +1,10 @@
-addi x1, x0, 1
-addi x2, x0, 10
-addi x10, x0, 0
-add x10, x10, x1
-addi x1, x1, 1
-bne x1, x2, loop
-xuxa
-baixinhos
-eba
+sub sp, sp, #8
+str r0, [sp, #4]
+mov r0, #2
+str r0, [sp]
+mov r0, #8
+str r0, [sp]
+ldr r0, [sp, #4]
+mul r1, r0, r0
+mov r0, r1
 hlt

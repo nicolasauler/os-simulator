@@ -253,7 +253,7 @@ void print_tcb_of_current_process(WINDOW *win, p_queue_t *p) {
         sprintf(temp, "Mem start: %u", current->process->mem_start);
         mvwaddnstr(win, 7, 3, temp, 30);
 
-        sprintf(temp, "Open file: insts%u", current->process->file_d);
+        sprintf(temp, "Open file: insts%u.asm", current->process->file_d);
         mvwaddnstr(win, 8, 3, temp, 30);
     }
     wrefresh(win);
@@ -305,7 +305,6 @@ void read_instructions_file(WINDOW *win, p_queue_t *p) {
     int j = 0;
     int k = 0;
     p_queue_t *current = p;
-    int n, maxy;
 
     restart_status(win);
 
@@ -317,23 +316,18 @@ void read_instructions_file(WINDOW *win, p_queue_t *p) {
     switch (current->process->pid % 5) {
     case 0:
         fp = fopen("insts/insts0.asm", "r");
-        n = 10;
         break;
     case 1:
         fp = fopen("insts/insts1.asm", "r");
-        n = 4;
         break;
     case 2:
         fp = fopen("insts/insts2.asm", "r");
-        n = 30;
         break;
     case 3:
         fp = fopen("insts/insts3.asm", "r");
-        n = 20;
         break;
     case 4:
         fp = fopen("insts/insts4.asm", "r");
-        n = 8;
         break;
     default:
         logger("Error opening file");
@@ -366,18 +360,6 @@ void read_instructions_file(WINDOW *win, p_queue_t *p) {
                  */
                 sprintf(instruction, "%s\t\t<----", instructions[j]);
                 mvwaddnstr(win, j + 3, 3, instruction, 28);
-
-                /* since it only fits n lines in the window based on max
-                 * vertical space when it hits the middle, start scrolling when
-                 * it hits and stop when all lines of the file fit in the window
-                 */
-                maxy = getmaxy(win);
-                if (n > maxy && j == maxy / 2) {
-                    scrollok(win, TRUE);
-                    wscrl(win, 5);
-                    /* scroll(win); */
-                    scrollok(win, FALSE);
-                }
             } else {
                 mvwaddnstr(win, j + 3, 3, instructions[j], 28);
                 /* mvwprintw(win, j + 3, 3, "%s\n", instructions[j]); */

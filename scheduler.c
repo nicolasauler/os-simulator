@@ -36,16 +36,16 @@ process_t *create_process(int mem_size, uint8_t pid) {
         new_process->time_remaining = 10;
         break;
     case 1:
-        new_process->time_remaining = 4;
+        new_process->time_remaining = 5;
         break;
     case 2:
-        new_process->time_remaining = 30;
+        new_process->time_remaining = 15;
         break;
     case 3:
-        new_process->time_remaining = 20;
+        new_process->time_remaining = 8;
         break;
     case 4:
-        new_process->time_remaining = 8;
+        new_process->time_remaining = 9;
         break;
     default:
         exit(1);

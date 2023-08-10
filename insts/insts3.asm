@@ -1,10 +1,8 @@
-random text
-abublu
-bleble
-bleble
-blabla
-blabla
-blibli
-blibli
-blublu
-blublu
+MRS R0, CPSR
+MSR CPSR_c, R1
+PUSH {R4, LR}
+POP {R4, LR}
+CMP R2, R3
+TST R4, #1
+BNE 0x2000
+HLT
