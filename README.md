@@ -1,7 +1,9 @@
 # Oh!C
 
 **Oh!**perating 
+
 **C**ystems
+
 **C**mulator
 
 Oh!C is an operating systems simulator that allows a user to:
@@ -10,9 +12,12 @@ Oh!C is an operating systems simulator that allows a user to:
 - Select size of memory to load in bit map
 
 # Usage
+## For Round Robin mode
+`./main -q <quantum_size>`
 
-`./main -q <a>`
+## For FIFO mode
+`./main`
 
-## Print
+## Example of running program
 
 ![Simulator running](./sim_so.png) 
